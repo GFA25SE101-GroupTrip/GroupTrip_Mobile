@@ -1,20 +1,45 @@
+// lib/routes/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/auth/presentation/screens/login_screen.dart';
 import 'package:group_trip/features/auth/presentation/screens/register_screen.dart';
+import 'package:group_trip/features/blog/presentation/blog_screen.dart';
+import 'package:group_trip/shared/main_layout.dart';
 
-final router = GoRouter(
+
+final appRouter = GoRouter(
   routes: [
-    GoRoute(path: '/', builder: (context, state) => const RegisterScreen()),
-    GoRoute(path: '/signin', builder: (context, state) => const LoginScreen()),
+    // Route có layout chung (Home / Trip / Profile)
+    ShellRoute(
+      builder: (context, state, child) {
+        return MainLayout(child: child);
+      },
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const BlogScreen(),
+        ),
+        // GoRoute(
+        //   path: '/trips',
+        //   builder: (context, state) => const TripScreen(),
+        // ),
+        // GoRoute(
+        //   path: '/profile',
+        //   builder: (context, state) => const ProfileScreen(),
+        // ),
+      ],
+    ),
 
-    // /detail/:id -> example
-    // GoRoute(
-    //   path: '/detail/:id',
-    //   builder: (context, state) {
-    //     final id = state.params['id']!;
-    //     return DetailScreen(id: id); // tạo file này nếu cần
-    //   },
-    // ),
+    // Route riêng (không dùng layout)
+    GoRoute(
+      path: '/signin',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
   ],
 );
+
+// Layout Wrapper cho ShellRoute

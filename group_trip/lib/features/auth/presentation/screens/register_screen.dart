@@ -68,13 +68,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return errors;
   }
 
-  Future<void> _handleGoogleSignIn() async {
+ Future<void> _handleGoogleSignIn() async {
   try {
+    print('🟢 Google Sign-In started');
+
     final GoogleSignIn _googleSignIn = GoogleSignIn(
+      serverClientId: '153605106227-lejscv0ptvd84avur70kqi0b85hdhnla.apps.googleusercontent.com',
       scopes: ['email', 'profile'],
     );
 
     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    print('🔹 googleUser: $googleUser');
+
     if (googleUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Google sign-in cancelled')),
@@ -82,34 +87,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-    final idToken = googleAuth.idToken;
-    print('Google ID Token: $idToken');
-    if (idToken == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to get Google ID token')),
-      );
-      return;
-    }
-
-    // Gửi idToken lên BE
-    // final dio = Dio(BaseOptions(baseUrl: 'https://your-backend-domain.com'));
-    // final response = await dio.post('/api/auth/google', data: {'idToken': idToken});
-
-    // // Nhận JWT từ backend
-    // final jwt = response.data['token'];
-    // final email = response.data['email'];
-    // final name = response.data['name'];
+    print('✅ Google Sign-In success');
+    print('🔸 ID Token: ${googleAuth.idToken}');
+    print('🔸 Access Token: ${googleAuth.accessToken}');
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Welcome, $idToken)')),
+      SnackBar(content: Text('Welcome, ${googleUser.displayName ?? 'User'}')),
     );
 
-    // TODO: Lưu jwt vào local (SharedPreferences / Riverpod State)
-    // và chuyển hướng sang màn hình chính
-  } catch (e) {
+  } catch (e, st) {
+    print('❌ Google sign-in error: $e');
+    print('🔍 StackTrace: $st');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Google sign-in error: $e')),
     );
