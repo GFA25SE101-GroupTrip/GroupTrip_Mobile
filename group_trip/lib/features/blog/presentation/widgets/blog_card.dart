@@ -9,6 +9,7 @@ class BlogCard extends StatelessWidget {
   final List<String> tags;
   final int likes;
   final String category; // ví dụ: agency, traveler
+  final VoidCallback? viewDetail;
 
   const BlogCard({
     super.key,
@@ -19,6 +20,7 @@ class BlogCard extends StatelessWidget {
     required this.tags,
     required this.likes,
     required this.category,
+    required this.viewDetail,
   });
 
   Color getCategoryColor(String category) {
@@ -34,11 +36,13 @@ class BlogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      child: Column(
+    return GestureDetector(
+      onTap: viewDetail,
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 4,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Stack(
@@ -52,8 +56,6 @@ class BlogCard extends StatelessWidget {
                   fit: BoxFit.cover,
                 ),
               ),
-             
-              
             ],
           ),
           Padding(
@@ -91,6 +93,7 @@ class BlogCard extends StatelessWidget {
           ),
         ],
       ),
+    )
     );
   }
 }

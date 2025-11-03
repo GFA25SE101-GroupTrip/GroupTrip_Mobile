@@ -81,3 +81,44 @@ class RoleModel {
     };
   }
 }
+
+
+class UserResponse {
+  final String userId;
+  final String userName;
+  final String role;
+  final String status;
+  final String accessToken;
+  final String refreshToken;
+
+  UserResponse({
+    required this.userId,
+    required this.userName,
+    required this.role,
+    required this.status,
+    required this.accessToken,
+    required this.refreshToken,
+  });
+
+  factory UserResponse.fromJson(Map<String, dynamic> json) {
+    return UserResponse(
+      userId: json['userId'] as String,
+      userName: json['userName'] as String,
+      role: json['role'] as String,
+      status: json['status'] as String,
+      accessToken: json['accessToken'] as String,
+      refreshToken: json['refreshToken'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'role': role,
+      'status': status,
+      'accessToken': accessToken,
+      'refreshToken': refreshToken,
+    };
+  }
+}

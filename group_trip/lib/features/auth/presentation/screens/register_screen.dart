@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:group_trip/features/auth/data/user_model.dart';
 import 'package:group_trip/features/auth/presentation/widgets/input_widget.dart';
 import 'package:group_trip/features/auth/providers/user_provider.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dio/dio.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -68,43 +68,50 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return errors;
   }
 
- Future<void> _handleGoogleSignIn() async {
-  try {
-    print('🟢 Google Sign-In started');
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      print('🟢 Google Sign-In started');
 
-    final GoogleSignIn _googleSignIn = GoogleSignIn(
-      serverClientId: '153605106227-lejscv0ptvd84avur70kqi0b85hdhnla.apps.googleusercontent.com',
-      scopes: ['email', 'profile'],
-    );
-
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    print('🔹 googleUser: $googleUser');
-
-    if (googleUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google sign-in cancelled')),
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        serverClientId:
+            '153605106227-lejscv0ptvd84avur70kqi0b85hdhnla.apps.googleusercontent.com',
+        scopes: ['email', 'profile'],
       );
-      return;
+
+      // ✅ Buộc đăng xuất để refresh lại token
+      await googleSignIn.signOut();
+
+      // ✅ Đăng nhập lại
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google sign-in cancelled')),
+        );
+        return;
+      }
+
+      // ✅ Lấy token mới sau khi đăng nhập
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      print('✅ Google Sign-In success');
+      print('🆕 ID Token (new): ${googleAuth.idToken}');
+      print('🔑 Access Token: ${googleAuth.accessToken}');
+
+      // 👉 Tại đây bạn có thể gửi googleAuth.idToken lên backend để verify
+      // await yourAuthRepository.verifyGoogleToken(googleAuth.idToken);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Welcome, ${googleUser.displayName ?? 'User'}')),
+      );
+    } catch (e, st) {
+      print('❌ Google sign-in error: $e');
+      print('🔍 StackTrace: $st');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Google sign-in error: $e')));
     }
-
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-    print('✅ Google Sign-In success');
-    print('🔸 ID Token: ${googleAuth.idToken}');
-    print('🔸 Access Token: ${googleAuth.accessToken}');
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Welcome, ${googleUser.displayName ?? 'User'}')),
-    );
-
-  } catch (e, st) {
-    print('❌ Google sign-in error: $e');
-    print('🔍 StackTrace: $st');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Google sign-in error: $e')),
-    );
   }
-}
 
   // Convenience boolean
   bool _isPasswordValid(String pwd) => _passwordValidationErrors(pwd).isEmpty;
@@ -147,8 +154,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         return;
       }
       print('✅ ref is ${ref.hashCode}');
-      print('✅ notifier is ${ref.read(authNotifierProvider.notifier)}');
-      final notifier = ref.read(authNotifierProvider.notifier);
+      print('✅ notifier is ${ref.read(registerNotifierProvider.notifier)}');
+      final notifier = ref.read(registerNotifierProvider.notifier);
       await notifier.register(
         UserModel(
           username: _emailController.text,
@@ -164,14 +171,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (!mounted) return;
 
       // TODO: Gọi API register ở đây (ví dụ dùng Dio)
-      final state = ref.read(authNotifierProvider);
+      final state = ref.read(registerNotifierProvider);
       state.when(
-        data: (user) {
-          if (user != null) {
+        data: (success) {
+          if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Register successful!")),
             );
-            context.push('/signin');
+            // '/' is the login route now
+            context.push('/');
           }
         },
         error: (e, _) {
@@ -186,8 +194,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authNotifierProvider);
-    final isLoading = authState is AsyncLoading;
+    final registerState = ref.watch(registerNotifierProvider);
+    final isLoading = registerState.maybeWhen(
+      loading: () => true,
+      orElse: () => false,
+    );
 
     final theme = Theme.of(context);
 
@@ -396,7 +407,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     const Text("Already have an account? "),
                     GestureDetector(
                       onTap: () {
-                        context.push('/signin');
+                        context.push('/');
                       },
                       child: const Text(
                         "Sign In",

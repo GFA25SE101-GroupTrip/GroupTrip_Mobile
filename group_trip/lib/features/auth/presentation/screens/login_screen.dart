@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/auth/presentation/widgets/input_widget.dart';
 import 'package:group_trip/features/auth/providers/user_provider.dart';
+import 'package:group_trip/core/providers/user_storage_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -102,9 +103,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         data: (user) {
           if (user != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Register successful!")),
+              const SnackBar(content: Text("Login successful")),
             );
-            context.push('/signin');
+            // Ensure profile provider refreshes and navigate to home immediately
+            ref.invalidate(userFromStorageProvider);
+            if (mounted) {
+              context.go('/blog');
+            }
           }
         },
         error: (e, _) {
@@ -270,7 +275,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               color: Colors.white,
                             )
                             : const Text(
-                              "Sign Up",
+                              "Sign In",
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.white,
@@ -289,10 +294,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const Text("Already have an account? "),
                     GestureDetector(
                       onTap: () {
-                        context.push('/');
+                        context.push('/signup');
                       },
                       child: const Text(
-                        "Sign In",
+                        "Sign Up",
                         style: TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.bold,

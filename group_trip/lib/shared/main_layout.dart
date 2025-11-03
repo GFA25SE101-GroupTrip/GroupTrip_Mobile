@@ -1,6 +1,8 @@
 // lib/core/ui/main_layout.dart
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/auth/presentation/screens/register_screen.dart';
 import 'package:group_trip/features/blog/presentation/blog_screen.dart';
+import 'package:group_trip/features/profile/presentation/profile_screen.dart';
 import 'package:group_trip/shared/widgets/bottom_navbar.dart';
 
 
@@ -17,7 +19,10 @@ class _MainLayoutState extends State<MainLayout> {
 
   final _pages = [
     const BlogScreen(),
-    
+    const RegisterScreen(),
+    const BlogScreen(),
+    const RegisterScreen(),
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {

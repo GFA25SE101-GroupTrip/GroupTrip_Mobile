@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/blog/presentation/blog_detail_screen.dart';
 import 'package:group_trip/features/blog/presentation/widgets/blog_card.dart';
+import 'package:group_trip/features/blog/presentation/widgets/modal_bottom_blog_sheet.dart';
 import 'package:group_trip/shared/widgets/appbars/blog_app_bar.dart';
 
 class BlogScreen extends StatelessWidget {
@@ -15,7 +17,7 @@ class BlogScreen extends StatelessWidget {
         "avatar": "https://i.pravatar.cc/100?img=1",
         "tags": ["#nature", "#mountain", "#sapa"],
         "likes": 324,
-        "category": "agency"
+        "category": "agency",
       },
       {
         "image": "https://picsum.photos/600/300?2",
@@ -24,7 +26,7 @@ class BlogScreen extends StatelessWidget {
         "avatar": "https://i.pravatar.cc/100?img=2",
         "tags": ["#food", "#saigon", "#streetfood"],
         "likes": 122,
-        "category": "traveler"
+        "category": "traveler",
       },
       {
         "image": "https://picsum.photos/600/300?3",
@@ -33,7 +35,7 @@ class BlogScreen extends StatelessWidget {
         "avatar": "https://i.pravatar.cc/100?img=3",
         "tags": ["#adventure", "#jungle", "#solo"],
         "likes": 97,
-        "category": "traveler"
+        "category": "traveler",
       },
       {
         "image": "https://picsum.photos/600/300?4",
@@ -42,35 +44,53 @@ class BlogScreen extends StatelessWidget {
         "avatar": "https://i.pravatar.cc/100?img=4",
         "tags": ["#heritage", "#hoian", "#travel"],
         "likes": 156,
-        "category": "agency"
+        "category": "agency",
       },
     ];
 
     return Scaffold(
-      appBar: BlogAppBar(
-    onSearch: (value) {
-      print('Đang tìm: $value');
-    },
-    onAddPost: () {
-      print('Thêm bài viết mới');
-      // Navigator.push(...);
-    },
-  ),
-      body: ListView.builder(
-        itemCount: blogs.length,
-        itemBuilder: (context, index) {
-          final b = blogs[index];
-          return BlogCard(
-            imageUrl: b["image"] as String,
-            title: b["title"] as String,
-            author: b["author"] as String,
-            authorAvatar: b["avatar"] as String,
-            tags: List<String>.from(b["tags"] as List<dynamic>),
-            likes: b["likes"]! as int,
-            category: b["category"]! as String,
+  appBar: PreferredSize(
+    preferredSize: const Size.fromHeight(kToolbarHeight),
+    child: Builder(
+      builder: (innerContext) => BlogAppBar(
+        onSearch: (value) {
+          print('Đang tìm: $value');
+        },
+        onAddPost: () {
+          showModalBottomSheet(
+            context: innerContext, // 👈 Dùng innerContext, không phải context của Scaffold
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => const CreateBlogBottomSheet(),
           );
         },
       ),
-    );
+    ),
+  ),
+  body: ListView.builder(
+    itemCount: blogs.length,
+    itemBuilder: (context, index) {
+      final b = blogs[index];
+      return BlogCard(
+        viewDetail: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const BlogDetailScreen(),
+            ),
+          );
+        },
+        imageUrl: b["image"] as String,
+        title: b["title"] as String,
+        author: b["author"] as String,
+        authorAvatar: b["avatar"] as String,
+        tags: List<String>.from(b["tags"] as List<dynamic>),
+        likes: b["likes"]! as int,
+        category: b["category"]! as String,
+      );
+    },
+  ),
+);
+
   }
 }

@@ -5,7 +5,7 @@ class UserRepository {
   final UserRemoteDataSource remoteDataSource;
   UserRepository({required this.remoteDataSource});
 
-  Future<UserModel> register(UserModel user) async {
+  Future<Map<String, dynamic>> register(UserModel user) async {
     try {
       return await remoteDataSource.registerUser(user);
     } catch (e) {
@@ -13,7 +13,7 @@ class UserRepository {
     }
   }
 
-  Future<UserModel> login(String userName, String password) async {
+  Future<UserResponse> login(String userName, String password) async {
     try {
       return await remoteDataSource.loginUser(userName, password);
     } catch (e) {

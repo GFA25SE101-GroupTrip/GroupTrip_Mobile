@@ -1,17 +1,18 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/core/api/api_client.dart';
+import 'package:group_trip/core/providers/api_client_provider.dart';
 import 'package:group_trip/features/auth/data/user_api.dart';
 import 'package:group_trip/features/auth/data/user_model.dart';
 import 'package:group_trip/features/auth/domain/role_repository.dart';
 import 'package:group_trip/features/auth/domain/user_repository.dart';
+import 'package:group_trip/core/config/secure_storage_service.dart';
+import 'package:group_trip/core/providers/secure_storage_provider.dart';
 
 // ...existing code...
 // Khai báo provider cho ApiClient. Riverpod sẽ tạo/khóa một instance ApiClient
 // lần đầu được đọc và tái sử dụng cho đến khi provider bị dispose.
-final apiClientProvider = Provider((ref) {
-  print('✅ apiClientProvider initialized');
-  return ApiClient();
-});
+
 
 final userRemoteDataSourceProvider = Provider((ref) {
   print('✅ userRemoteDataSourceProvider initialized');
@@ -54,25 +55,66 @@ class RoleNotifier extends StateNotifier<AsyncValue<List<RoleModel>>> {
 }
 // --- Notifier ---
 final authNotifierProvider =
-  StateNotifierProvider<AuthNotifier, AsyncValue<UserModel?>>((ref) {
+  StateNotifierProvider<AuthNotifier, AsyncValue<UserResponse?>>((ref) {
   print('✅ authNotifierProvider initialized');
-  return AuthNotifier(ref.watch(userRepositoryProvider));
+  return AuthNotifier(ref.watch(userRepositoryProvider), ref.watch(secureStorageProvider));
 });
 
-class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
+final registerNotifierProvider =
+    StateNotifierProvider<RegisterNotifier, AsyncValue<bool>>((ref) {
+  print('✅ registerNotifierProvider initialized');
+  return RegisterNotifier(ref.watch(userRepositoryProvider));
+});
+class RegisterNotifier extends StateNotifier<AsyncValue<bool>> {
   final UserRepository repository;
 
-  AuthNotifier(this.repository) : super(const AsyncData(null));
+  RegisterNotifier(this.repository) : super(const AsyncData(false));
 
   Future<void> register(UserModel user) async {
-  state = const AsyncLoading();
-  print('🔄 Starting registration for user: ${user.toJson()}');
-  try {
-    final result = await repository.register(user); // giữ nguyên API repo
-    state = AsyncData(result);
-  } catch (e, st) {
-    state = AsyncError(e, st);
+    state = const AsyncLoading();
+    try {
+      final res = await repository.register(user);
+      // repository.register returns Map<String, dynamic>
+      if (res['statusCode'] == 200) {
+        state = const AsyncData(true);
+      } else {
+        state = AsyncError(
+          Exception(res['message'] ?? 'Registration failed'),
+          StackTrace.current,
+        );
+      }
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
   }
+}
+class AuthNotifier extends StateNotifier<AsyncValue<UserResponse?>> {
+  final UserRepository repository;
+  final SecureStorageService storage;
+  final ValueNotifier<int> listenable = ValueNotifier<int>(0);
+
+  AuthNotifier(this.repository, this.storage) : super(const AsyncData(null));
+  
+  void _emit() {
+    listenable.value++;
+    // debug
+    // ignore: avoid_print
+    print('AuthNotifier emit: state=$state, listenable=${listenable.value}');
+  }
+  void setAuthenticated(UserResponse user) {
+    state = AsyncData(user);
+    _emit();
+  }
+
+  Future<void> restoreSession() async {
+    final storedUser = await storage.getUserResponseFromJson();
+    if (storedUser != null) {
+      state = AsyncData(storedUser);
+      _emit();
+    }else {
+      state = const AsyncData(null);
+      _emit();
+    }
   }
 
   Future<void> login(String email, String password) async {
@@ -81,19 +123,23 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
   try {
     final result = await repository.login(email, password); // hoặc repository.login(user)
     state = AsyncData(result);
+    _emit();
   } catch (e, st) {
     state = AsyncError(e, st);
+    _emit();
   }
   }
 
-  void logout() {
-  // xóa state / token tùy implement của bạn
-  state = const AsyncData(null);
+  Future<void> logout() async {
+    // Clear stored tokens and user data locally
+    try {
+      await storage.clearUserJson();
+      await storage.clearTokens();
+    } catch (_) {}
+    state = const AsyncData(null);
+    _emit();
   }
 }
-
-
-
 
 final roleNotifierProvider =
     StateNotifierProvider<RoleNotifier, AsyncValue<List<RoleModel>>>((ref) {

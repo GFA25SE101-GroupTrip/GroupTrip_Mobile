@@ -24,7 +24,6 @@ class BlogAppBar extends StatelessWidget implements PreferredSizeWidget {
           final TextEditingController _searchController = TextEditingController();
           final FocusNode _focusNode = FocusNode();
           bool _isSearching = false;
-
           return StatefulBuilder(
         builder: (context, setState) {
           return AnimatedSwitcher(
@@ -110,7 +109,7 @@ class BlogAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: ElevatedButton(
           onPressed: onAddPost,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
+            backgroundColor: const Color.fromARGB(255, 21, 24, 119),
             foregroundColor: Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
