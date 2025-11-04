@@ -34,4 +34,22 @@ class ProfileRepository {
       rethrow;
     }
   }
+  Future<void> updateUserInformation(String userID,
+    String fullname,
+    String phonenumber,
+    String bankAccount,
+    String bankName) async {
+    try {
+      // ignore: avoid_print
+      print('🔁 [ProfileRepository] updateUserInformation(name=${fullname}, email=${phonenumber})');
+      // Assuming there's a method in remoteDataSource for updating user information
+      await remoteDataSource.updateUserInformation(userID, fullname, phonenumber, bankAccount, bankName);
+      // ignore: avoid_print
+      print('✅ [ProfileRepository] updateUserInformation completed');
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ [ProfileRepository] updateUserInformation failed: $e');
+      rethrow;
+    }
+  }
 }

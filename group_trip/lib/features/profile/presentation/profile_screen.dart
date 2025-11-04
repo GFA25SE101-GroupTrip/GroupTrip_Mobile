@@ -236,6 +236,9 @@ class ProfileScreen extends ConsumerWidget {
 
                 // Invalidate cached user provider so UI updates
                 ref.invalidate(userFromStorageProvider);
+                // Also clear profile data cached in providers so profile view updates
+                ref.invalidate(profileNotifierProvider);
+                ref.invalidate(profileViewProvider);
 
                 // Navigate to login
                 context.push('/');

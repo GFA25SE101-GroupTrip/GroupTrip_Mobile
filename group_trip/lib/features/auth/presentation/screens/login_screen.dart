@@ -102,8 +102,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       state.when(
         data: (user) {
           if (user != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Login successful")),
+           ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Login Success!'),
+                duration: Duration(seconds: 2),
+                backgroundColor: Colors.green,
+              ),
             );
             // Ensure profile provider refreshes and navigate to home immediately
             ref.invalidate(userFromStorageProvider);
@@ -126,7 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState is AsyncLoading;
-
+    final isError = authState is AsyncError;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -306,6 +310,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ],
                 ),
+
+                if (isError) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    textAlign: TextAlign.center,
+                    'Login failed. Confirm your email, username and password are incorrect.',
+                    style: TextStyle(
+                      color: Colors.red[700],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
               ],
             ),
           ),

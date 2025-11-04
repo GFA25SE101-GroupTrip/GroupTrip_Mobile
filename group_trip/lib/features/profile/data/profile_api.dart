@@ -13,9 +13,13 @@ class ProfileRemoteDataSource {
     print('➡️ [ProfileAPI] GET /profiles/current-user -> service=user');
     final response = await api.get('user', '/api/profiles/current-user');
     // ignore: avoid_print
-    print('⬅️ [ProfileAPI] GET /profiles/current-user status=${response.statusCode} data=${response.data}');
+    print(
+      '⬅️ [ProfileAPI] GET /profiles/current-user status=${response.statusCode} data=${response.data}',
+    );
 
-    if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+    if (response.statusCode != null &&
+        response.statusCode! >= 200 &&
+        response.statusCode! < 300) {
       // The backend wraps response in { data: { ... } } — handle that shape.
       dynamic payload = response.data;
       if (payload is Map && payload.containsKey('data')) {
@@ -25,7 +29,9 @@ class ProfileRemoteDataSource {
       if (payload is Map<String, dynamic>) {
         return ProfileModel.fromJson(payload);
       } else {
-        throw Exception('Unexpected profile payload shape: ${payload.runtimeType}');
+        throw Exception(
+          'Unexpected profile payload shape: ${payload.runtimeType}',
+        );
       }
     } else {
       throw Exception('Failed to load profile: status=${response.statusCode}');
@@ -35,26 +41,72 @@ class ProfileRemoteDataSource {
   Future<void> updateUserProfile(String bio, String imageUrl) async {
     // Log request for debugging so we can confirm network activity
     // ignore: avoid_print
-    print('➡️ [ProfileAPI] POST /profiles/user -> service=user payload={bio:${bio}, image_url:$imageUrl}');
+    print(
+      '➡️ [ProfileAPI] POST /profiles/user -> service=user payload={bio:${bio}, image_url:$imageUrl}',
+    );
     final response = await api.post(
       'user',
       '/api/profiles/user',
-      data: {
-        'bio': bio,
-        'image_url': imageUrl,
-      },
+      data: {'bio': bio, 'image_url': imageUrl},
     );
     // ignore: avoid_print
-    print('⬅️ [ProfileAPI] POST /profiles/user status=${response.statusCode} data=${response.data}');
+    print(
+      '⬅️ [ProfileAPI] POST /profiles/user status=${response.statusCode} data=${response.data}',
+    );
 
-    if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+    if (response.statusCode != null &&
+        response.statusCode! >= 200 &&
+        response.statusCode! < 300) {
       // success
       // ignore: avoid_print
       print('✅ Profile updated successfully');
       // ignore: avoid_print
       print(response.data);
     } else {
-      throw Exception('Failed to update profile: status=${response.statusCode}');
+      throw Exception(
+        'Failed to update profile: status=${response.statusCode}',
+      );
     }
   }
-} 
+
+  Future<void> updateUserInformation(
+    String userID,
+    String fullname,
+    String phonenumber,
+    String bankAccount,
+    String bankName,
+  ) async {
+    // Log request for debugging so we can confirm network activity
+    // ignore: avoid_print
+    print('➡️ [ProfileAPI] PUT /profiles/user/information -> service=user');
+    final response = await api.put(
+      'auth',
+      '/api/auth/updateuserinfo',
+      data: {
+        "userId": userID,
+        "fullName": fullname,
+        "phoneNumber": phonenumber,
+        "bankAccount": bankAccount,
+        "bankName": bankName,
+      },
+    );
+    // ignore: avoid_print
+    print(
+      '⬅️ [ProfileAPI] POST /profiles/user/information status=${response.statusCode} data=${response.data}',
+    );
+
+    if (response.statusCode != null &&
+        response.statusCode! >= 200 &&
+        response.statusCode! < 300) {
+      // success
+      // ignore: avoid_print
+      print('✅ User information updated successfully');
+      // ignore: avoid_print
+      print(response.data);
+    } else {
+      throw Exception(
+        'Failed to update user information: status=${response.statusCode}',
+      );
+    }
+  }
+}

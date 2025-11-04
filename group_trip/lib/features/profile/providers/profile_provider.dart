@@ -56,6 +56,21 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
       state = AsyncError(e, st);
     }
   }
+  Future<void> updateUserInformation(String userID,
+    String fullname,
+    String phonenumber,
+    String bankAccount,
+    String bankName) async {
+    state = const AsyncLoading();
+    try {
+      await repository.updateUserInformation(userID, fullname, phonenumber, bankAccount, bankName);
+      // Refresh profile after update
+      final profile = await repository.fetchUserProfile();
+      state = AsyncData(profile);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
 }
 
 final profileNotifierProvider =
@@ -69,13 +84,15 @@ final profileNotifierProvider =
 /// and remote `ProfileModel`. UI should watch this provider to get a single
 /// cohesive source of display data.
 class ProfileView {
+  final String userID;
   final String displayName;
   final String subtitle;
   final String? imageUrl;
   final String? bio;
   final bool isUpdated;
+  final String? fullname;
 
-  ProfileView({required this.displayName, required this.subtitle, this.imageUrl, this.bio, this.isUpdated = false});
+  ProfileView({required this.userID, required this.displayName, required this.subtitle, this.imageUrl, this.bio, this.isUpdated = false, this.fullname});
 }
 
 final profileViewProvider = Provider<ProfileView?>((ref) {
@@ -87,22 +104,26 @@ final profileViewProvider = Provider<ProfileView?>((ref) {
   if (profile != null) {
     // Ưu tiên dữ liệu profile
     return ProfileView(
+      userID: user?.userId ?? 'unknown',
       displayName: user?.userName ?? 'Người dùng',
       subtitle: user?.role ?? 'Chưa có thông tin',
       imageUrl: profile.imageUrl,
       bio: profile.bio,
       isUpdated: true,
+      fullname: null,
     );
   }
 
   // Fallback sang local user
   if (user != null) {
     return ProfileView(
+      userID: user.userId ?? 'unknown',
       displayName: user.userName ?? 'Người dùng',
       subtitle: user.role ?? user.status ?? 'Chưa có thông tin',
       imageUrl: null,
       bio: null,
       isUpdated: false,
+      fullname: null,
     );
   }
 

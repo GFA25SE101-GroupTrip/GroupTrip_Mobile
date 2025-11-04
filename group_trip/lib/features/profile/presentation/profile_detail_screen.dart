@@ -24,12 +24,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   final TextEditingController bankNameCtrl = TextEditingController();
   File? _avatarFile;
   bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // initialize with empty or persisted values later
-  }
+  bool _didInitControllers = false;
 
   @override
   void dispose() {
@@ -73,8 +68,8 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
       }
     }
 
-    // Always try to update profile on server (bio may be empty but backend can handle)
-    try {
+    if(bioCtrl.text.isNotEmpty){
+     try {
       final profileNotifier = ref.read(profileNotifierProvider.notifier);
       await profileNotifier.updateUserProfile(bioCtrl.text, imageUrl);
       // ignore: avoid_print
@@ -92,6 +87,8 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         _isSaving = false;
       }
     }
+    }
+    
   }
 
   Future<String?> _showBankPicker() async {
@@ -276,12 +273,11 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final profileView = ref.watch(profileViewProvider);
-    final profileState = ref.watch(profileNotifierProvider);
 
-    // Initialize controllers with current profile data
-    nameCtrl.text = profileView?.displayName ?? '';
-    emailCtrl.text = profileView?.displayName ?? '';
-    bioCtrl.text = profileView?.bio ?? '';
+    // IMPORTANT: do not set controller.text here — build() is called often
+    // (for example after picking an image) and setting controllers inside
+    // build will overwrite user edits. Instead we keep controllers as the
+    // user-editable source and show profile values as hints in the header.
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
       appBar: AppBar(
@@ -310,8 +306,13 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                           try {
                             final profileNotifier = ref.read(profileNotifierProvider.notifier);
                             // Use existing remote imageUrl if any; uploading handled separately via avatar save
-                            final currentImageUrl = ref.read(profileViewProvider)?.imageUrl ?? '';
-                            await profileNotifier.updateUserProfile(bioCtrl.text, currentImageUrl);
+                            await profileNotifier.updateUserInformation(
+                              profileView?.userID ?? '',
+                              usernameCtrl.text,
+                              phoneCtrl.text,
+                              bankAccountCtrl.text,
+                              bankNameCtrl.text,
+                            );
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Thông tin cá nhân đã được cập nhật')),
                             );
@@ -410,7 +411,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                   ),
                   _inputField(
                     usernameCtrl,
-                    profileView?.displayName ?? "Họ và tên",
+                    profileView?.fullname ?? "Họ và tên",
                   ),
                   _inputField(phoneCtrl, "Số điện thoại"),
                 ],

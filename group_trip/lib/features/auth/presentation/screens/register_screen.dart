@@ -176,8 +176,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         data: (success) {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Register successful!")),
+              SnackBar(
+                content: Text('Register Success!'),
+                duration: Duration(seconds: 2),
+                backgroundColor: Colors.green,
+              ),
             );
+
             // '/' is the login route now
             context.push('/');
           }

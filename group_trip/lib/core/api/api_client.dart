@@ -187,7 +187,22 @@ class ApiClient {
     return dio.post(path, data: data);
   }
 
+  Future<Response> put(String serviceKey, String path, {dynamic data}) {
+    final dio = _dioFor(serviceKey);
+    // ignore: avoid_print
+    print('➡️ [ApiClient] PUT service=$serviceKey path=$path data=$data base=${dio.options.baseUrl}');
+
+    final base = dio.options.baseUrl;
+    if ((base.isEmpty) && path.startsWith('/')) {
+      throw ArgumentError('No API base URL configured for service "$serviceKey". '
+          'Set API_BASE_URL or API_BASE_${serviceKey.toUpperCase()} in your environment, or pass an absolute URL to the request. '
+          'Currently dio.options.baseUrl="${base}"');
+    }
+
+    return dio.put(path, data: data);
+  }
   /// Convenience helpers that use 'default' service.
   Future<Response> getDefault(String path, {Map<String, dynamic>? queryParameters}) => get('default', path, queryParameters: queryParameters);
   Future<Response> postDefault(String path, {dynamic data}) => post('default', path, data: data);
+  Future<Response> putDefault(String path, {dynamic data}) => put('default', path, data: data);
 }
