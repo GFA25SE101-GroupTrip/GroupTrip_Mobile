@@ -1,12 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/features/profile/providers/profile_provider.dart';
+import 'package:group_trip/shared/widgets/atoms/named_avartar.dart';
 
-class ProfileHeader extends StatelessWidget {
+class ProfileHeader extends ConsumerWidget {
   final TextEditingController nameCtrl;
   final TextEditingController emailCtrl;
   final TextEditingController bioCtrl;
   final File? avatarFile;
+  final String? avatarUrl;
   final VoidCallback onEditAvatar; // open picker
   final VoidCallback onSaveAvatarBio;
   final bool isEditing;
@@ -16,23 +20,19 @@ class ProfileHeader extends StatelessWidget {
     required this.emailCtrl,
     required this.bioCtrl,
     required this.avatarFile,
+    required this.avatarUrl,
     required this.onEditAvatar,
     required this.onSaveAvatarBio,
     required this.isEditing,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(profileViewProvider);
     return Container(
       margin: const EdgeInsets.all(7),
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF7F7FD5), Color(0xFF86A8E7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         children: [
@@ -42,8 +42,53 @@ class ProfileHeader extends StatelessWidget {
                 ClipOval(
                   child: Image.file(avatarFile!, width: 80, height: 80, fit: BoxFit.cover),
                 )
+              else if (avatarUrl != null && avatarUrl!.trim().isNotEmpty)
+                // avatarUrl may be a remote http(s) URL or a local file path (file:// or absolute path).
+                // Prefer NetworkImage for http(s), otherwise use FileImage to avoid passing file:/// to Image.network.
+                () {
+                  final uri = Uri.tryParse(avatarUrl!);
+                  final isRemote = uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+                  final isFileUri = uri != null && uri.scheme == 'file';
+                  final looksLikeLocalPath = !isRemote && (avatarUrl!.startsWith('/') || RegExp(r'^[A-Za-z]:\\').hasMatch(avatarUrl!));
+
+                  final trimmed = avatarUrl!.trim();
+                  // ignore: avoid_print
+                  print('🖼️ header avatar url="$trimmed"');
+                  if (isRemote) {
+                    return ClipOval(
+                      child: Image.network(
+                        trimmed,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, st) {
+                          // ignore: avoid_print
+                          print('❌ Image.network(header) failed for $trimmed: $err');
+                          return NameAvatar(name: nameCtrl.text, size: 80);
+                        },
+                      ),
+                    );
+                  } else if (isFileUri || looksLikeLocalPath) {
+                    String path = trimmed;
+                    if (isFileUri) {
+                      // remove file:// scheme
+                      path = uri.toFilePath();
+                    }
+                    try {
+                      return ClipOval(
+                        child: Image.file(File(path), width: 80, height: 80, fit: BoxFit.cover),
+                      );
+                    } catch (e) {
+                      // ignore: avoid_print
+                      print('❌ Image.file(header) failed for $path: $e');
+                      return NameAvatar(name: nameCtrl.text, size: 80);
+                    }
+                  } else {
+                    return NameAvatar(name: nameCtrl.text, size: 80);
+                  }
+                }()
               else
-                CircleAvatar(backgroundColor: Colors.white24, radius: 40, child: Text(_initials(nameCtrl.text))),
+                NameAvatar(name: nameCtrl.text, size: 80),
               Positioned(
                 bottom: 0,
                 right: 0,
@@ -68,25 +113,25 @@ class ProfileHeader extends StatelessWidget {
             TextField(
               controller: nameCtrl,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontWeight: FontWeight.bold, fontSize: 18),
               decoration: const InputDecoration(border: InputBorder.none, hintText: 'Name', hintStyle: TextStyle(color: Colors.white70)),
             ),
             TextField(
               controller: emailCtrl,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70),
+              style: const TextStyle(color: Color.fromARGB(179, 0, 0, 0)),
               decoration: const InputDecoration(border: InputBorder.none, hintText: 'Email', hintStyle: TextStyle(color: Colors.white70)),
             ),
           ] else ...[
-            Text(nameCtrl.text, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-            Text(emailCtrl.text, style: const TextStyle(color: Colors.white70)),
+            Text(nameCtrl.text, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color.fromARGB(255, 0, 0, 0), fontWeight: FontWeight.bold)),
+            Text(emailCtrl.text, style: const TextStyle(color: Color.fromARGB(179, 0, 0, 0))),
           ],
 
           const SizedBox(height: 8),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
             Icon(Icons.check_circle, color: Colors.greenAccent, size: 18),
             SizedBox(width: 6),
-            Text('Active', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+            Text('Active', style: TextStyle(color: Color.fromARGB(255, 12, 12, 12), fontWeight: FontWeight.w500)),
           ]),
 
           const SizedBox(height: 8),
@@ -95,30 +140,32 @@ class ProfileHeader extends StatelessWidget {
             Column(children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: TextField(controller: bioCtrl, maxLines: 3, decoration: const InputDecoration(border: InputBorder.none, hintText: 'Bio', hintStyle: TextStyle(color: Colors.white70))),
+                child: TextField(controller: bioCtrl, maxLines: 3, decoration: const InputDecoration( hintText: 'Giới thiệu bản thân', hintStyle: TextStyle(color: Color.fromARGB(179, 0, 0, 0)))),
               ),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
-                onPressed: onSaveAvatarBio,
-                icon: const Icon(Icons.save),
-                label: const Text('Lưu ảnh & Bio'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white24, foregroundColor: Colors.white),
-              ),
-            ])
-          else
+    const SizedBox(height: 8),
+    if (state?.isUpdated == false)
+      ElevatedButton.icon(
+        onPressed: onSaveAvatarBio,
+        icon: const Icon(Icons.save),
+        label: const Text('Lưu ảnh & Bio'),
+        style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(57, 7, 41, 193), foregroundColor: Color.fromARGB(255, 255, 255, 255)),
+      )
+    else
+      ElevatedButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.check),
+        label: const Text('cập nhật'),
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, foregroundColor: Color.fromARGB(255, 255, 255, 255)),
+      ),
+  ])
+else
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text(bioCtrl.text, style: const TextStyle(color: Colors.white), maxLines: 3, overflow: TextOverflow.ellipsis),
+              child: Text(bioCtrl.text, style: const TextStyle(color: Color.fromARGB(255, 49, 49, 49)), maxLines: 3, overflow: TextOverflow.ellipsis),
             ),
         ],
       ),
     );
   }
 
-  static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '';
-    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-    return (parts[0][0] + parts.last[0]).toUpperCase();
-  }
 }

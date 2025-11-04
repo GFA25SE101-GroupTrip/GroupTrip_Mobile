@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/core/constants/uploadImage.dart';
+import 'package:group_trip/features/profile/providers/profile_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:group_trip/features/profile/presentation/widgets/profile_header.dart';
 
@@ -20,8 +22,8 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   final TextEditingController bioCtrl = TextEditingController();
   final TextEditingController bankAccountCtrl = TextEditingController();
   final TextEditingController bankNameCtrl = TextEditingController();
-
   File? _avatarFile;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -42,7 +44,10 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final XFile? picked = await ImagePicker().pickImage(source: source, imageQuality: 80);
+    final XFile? picked = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 80,
+    );
     if (picked != null) {
       setState(() {
         _avatarFile = File(picked.path);
@@ -50,46 +55,100 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     }
   }
 
+  Future<void> _saveImageAndBio() async {
+    setState(() {
+      _isSaving = true;
+    });
+
+    String imageUrl = '';
+    // If there's an avatar selected, upload it first
+    if (_avatarFile != null) {
+      try {
+        imageUrl = await UploadImageService().uploadImage(_avatarFile!);
+        // ignore: avoid_print
+        print('✅ Image uploaded: $imageUrl');
+      } catch (e) {
+        // ignore: avoid_print
+        print('❌ Image upload failed: $e');
+      }
+    }
+
+    // Always try to update profile on server (bio may be empty but backend can handle)
+    try {
+      final profileNotifier = ref.read(profileNotifierProvider.notifier);
+      await profileNotifier.updateUserProfile(bioCtrl.text, imageUrl);
+      // ignore: avoid_print
+      print('✅ Profile update requested: bio=${bioCtrl.text}, imageUrl=$imageUrl');
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ Failed to update profile on server: $e');
+      rethrow;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      } else {
+        _isSaving = false;
+      }
+    }
+  }
+
   Future<String?> _showBankPicker() async {
-    final banks = <String>['Vietcombank', 'Techcombank', 'BIDV', 'VPBank', 'MB Bank', 'Sacombank', 'TPBank'];
+    final banks = <String>[
+      'Vietcombank',
+      'Techcombank',
+      'BIDV',
+      'VPBank',
+      'MB Bank',
+      'Sacombank',
+      'TPBank',
+    ];
     String query = '';
     return await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) {
-        return StatefulBuilder(builder: (context, setStateModal) {
-          final filtered = banks.where((b) => b.toLowerCase().contains(query.toLowerCase())).toList();
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: TextField(
-                    decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Tìm ngân hàng'),
-                    onChanged: (v) => setStateModal(() => query = v),
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            final filtered = banks.where((b) => b.toLowerCase().contains(query.toLowerCase())).toList();
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'Tìm ngân hàng',
+                      ),
+                      onChanged: (v) => setStateModal(() => query = v),
+                    ),
                   ),
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 300),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: filtered.length,
-                    itemBuilder: (_, i) {
-                      final b = filtered[i];
-                      return ListTile(
-                        title: Text(b),
-                        onTap: () => Navigator.of(ctx).pop(b),
-                      );
-                    },
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 300),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: filtered.length,
+                      itemBuilder: (_, i) {
+                        final b = filtered[i];
+                        return ListTile(
+                          title: Text(b),
+                          onTap: () => Navigator.of(ctx).pop(b),
+                        );
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          );
-        });
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
       },
     );
   }
@@ -99,76 +158,78 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     final pass2 = TextEditingController();
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Đổi mật khẩu"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: pass1,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: "Mật khẩu mới"),
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Đổi mật khẩu"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: pass1,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: "Mật khẩu mới"),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: pass2,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: "Nhập lại mật khẩu",
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: pass2,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Nhập lại mật khẩu",
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Hủy"),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Hủy"),
+              ElevatedButton(
+                onPressed: () {
+                  if (pass1.text == pass2.text && pass1.text.isNotEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Đổi mật khẩu thành công!")),
+                    );
+                    Navigator.pop(context);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Mật khẩu không khớp!")),
+                    );
+                  }
+                },
+                child: const Text("Lưu"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              if (pass1.text == pass2.text && pass1.text.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Đổi mật khẩu thành công!")),
-                );
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Mật khẩu không khớp!")),
-                );
-              }
-            },
-            child: const Text("Lưu"),
-          ),
-        ],
-      ),
     );
   }
 
   void _deleteAccount() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Xóa tài khoản"),
-        content: const Text(
-          "Bạn có chắc chắn muốn xóa tài khoản này không?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Hủy"),
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Xóa tài khoản"),
+            content: const Text(
+              "Bạn có chắc chắn muốn xóa tài khoản này không?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Hủy"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Tài khoản đã bị xóa")),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text("Xóa"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Tài khoản đã bị xóa")),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Xóa"),
-          ),
-        ],
-      ),
     );
   }
 
@@ -214,8 +275,13 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
+    final profileView = ref.watch(profileViewProvider);
+    final profileState = ref.watch(profileNotifierProvider);
 
+    // Initialize controllers with current profile data
+    nameCtrl.text = profileView?.displayName ?? '';
+    emailCtrl.text = profileView?.displayName ?? '';
+    bioCtrl.text = profileView?.bio ?? '';
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
       appBar: AppBar(
@@ -225,14 +291,42 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save, color: Colors.blue),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile saved successfully!')),
-              );
-            },
-          ),
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: _isSaving
+                    ? const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.save, color: Colors.blue),
+                        onPressed: () async {
+                          setState(() {
+                            _isSaving = true;
+                          });
+                          try {
+                            final profileNotifier = ref.read(profileNotifierProvider.notifier);
+                            // Use existing remote imageUrl if any; uploading handled separately via avatar save
+                            final currentImageUrl = ref.read(profileViewProvider)?.imageUrl ?? '';
+                            await profileNotifier.updateUserProfile(bioCtrl.text, currentImageUrl);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Thông tin cá nhân đã được cập nhật')),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Cập nhật thất bại. Vui lòng thử lại.')),
+                            );
+                          } finally {
+                            setState(() {
+                              _isSaving = false;
+                            });
+                          }
+                        },
+                      ),
+              ),
         ],
       ),
 
@@ -241,41 +335,59 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 4.0,
+              ),
               child: ProfileHeader(
                 nameCtrl: nameCtrl,
                 emailCtrl: emailCtrl,
                 bioCtrl: bioCtrl,
                 avatarFile: _avatarFile,
+                avatarUrl: profileView?.imageUrl,
                 isEditing: true,
-                onEditAvatar: () => showModalBottomSheet(
-                  context: context,
-                  builder: (_) => SafeArea(
-                    child: Wrap(
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.photo_library),
-                          title: const Text('Chọn từ thư viện'),
-                          onTap: () {
-                            Navigator.pop(context);
-                            _pickImage(ImageSource.gallery);
-                          },
-                        ),
-                        ListTile(
-                          leading: const Icon(Icons.camera_alt),
-                          title: const Text('Chụp ảnh'),
-                          onTap: () {
-                            Navigator.pop(context);
-                            _pickImage(ImageSource.camera);
-                          },
-                        ),
-                      ],
+                onEditAvatar:
+                    () => showModalBottomSheet(
+                      context: context,
+                      builder:
+                          (_) => SafeArea(
+                            child: Wrap(
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.photo_library),
+                                  title: const Text('Chọn từ thư viện'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _pickImage(ImageSource.gallery);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.camera_alt),
+                                  title: const Text('Chụp ảnh'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _pickImage(ImageSource.camera);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
                     ),
-                  ),
-                ),
-                onSaveAvatarBio: () {
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ảnh/Bio đã lưu (chưa upload)')));
+                onSaveAvatarBio: () async {
+                  try {
+                    await _saveImageAndBio();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Ảnh/Bio đã lưu và gửi lên server'),
+                      ),
+                    );
+                  } catch (_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Có lỗi khi lưu ảnh/bio'),
+                      ),
+                    );
+                  }
                 },
               ),
             ),
@@ -296,9 +408,11 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  _inputField(usernameCtrl, "Username"),
-                  _inputField(phoneCtrl, "Phone number"),
-                  _inputField(emailCtrl, "Email"),
+                  _inputField(
+                    usernameCtrl,
+                    profileView?.displayName ?? "Họ và tên",
+                  ),
+                  _inputField(phoneCtrl, "Số điện thoại"),
                 ],
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'dart:io';
 
 /// Avatar sinh từ tên (initials) + có thể hiển thị image nếu cung cấp.
 /// Sử dụng:
@@ -85,9 +86,24 @@ class NameAvatar extends StatelessWidget {
         borderRadius: borderRadius ?? BorderRadius.circular(size / 2),
         image: (imageUrl != null || assetImage != null)
             ? DecorationImage(
-                image: imageUrl != null
-                    ? NetworkImage(imageUrl!)
-                    : AssetImage(assetImage!) as ImageProvider,
+                image: (() {
+                  if (imageUrl != null) {
+                    final uri = Uri.tryParse(imageUrl!);
+                    final isRemote = uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+                    final isFileUri = uri != null && uri.scheme == 'file';
+                    final looksLikeLocalPath = !isRemote && (imageUrl!.startsWith('/') || RegExp(r'^[A-Za-z]:\\').hasMatch(imageUrl!));
+                    if (isRemote) {
+                      return NetworkImage(imageUrl!);
+                    } else if (isFileUri || looksLikeLocalPath) {
+                      var path = imageUrl!;
+                      if (isFileUri) path = uri.toFilePath();
+                      return FileImage(File(path));
+                    } else {
+                      return NetworkImage(imageUrl!);
+                    }
+                  }
+                  return AssetImage(assetImage!) as ImageProvider<Object>;
+                })() as ImageProvider<Object>,
                 fit: BoxFit.cover,
               )
             : null,

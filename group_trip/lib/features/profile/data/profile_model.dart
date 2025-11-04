@@ -15,15 +15,42 @@ class ProfileModel {
     required this.createdTime,
   });
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    // Support multiple possible key names and tolerate nulls from backend.
+    String _getString(dynamic v) => v == null ? '' : v.toString();
+
+    final userProfileId = _getString(json['userProfileId'] ?? json['user_profile_id']);
+    final userId = _getString(json['userId'] ?? json['user_id']);
+    final bio = _getString(json['bio']);
+    final imageUrl = _getString(json['imageUrl'] ?? json['image_url'] ?? json['avatar']);
+
+    List<String>? tags;
+    if (json['tags'] != null) {
+      try {
+        tags = List<String>.from((json['tags'] as List).map((e) => e.toString()));
+      } catch (_) {
+        tags = null;
+      }
+    }
+
+    DateTime createdTime;
+    try {
+      final ct = json['created_time'] ?? json['createdTime'] ?? json['createdAt'];
+      if (ct != null) {
+        createdTime = DateTime.parse(ct.toString());
+      } else {
+        createdTime = DateTime.now();
+      }
+    } catch (_) {
+      createdTime = DateTime.now();
+    }
+
     return ProfileModel(
-      userProfileId: json['userProfileId'] as String,
-      userId: json['userId'] as String,
-      bio: json['bio'] as String,
-      imageUrl: json['image_url'] as String,
-      tags: json['tags'] != null
-          ? List<String>.from(json['tags'] as List<dynamic>)
-          : null,
-      createdTime: DateTime.parse(json['created_time'] as String),
+      userProfileId: userProfileId,
+      userId: userId,
+      bio: bio,
+      imageUrl: imageUrl,
+      tags: tags,
+      createdTime: createdTime,
     );
   }
   Map<String, dynamic> toJson() {
@@ -37,3 +64,4 @@ class ProfileModel {
     };
   }
 }
+

@@ -24,7 +24,7 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
   final Ref ref;
   final ProfileRepository repository;
 
-ProfileNotifier(this.ref, this.repository) : super(const AsyncValue.loading()) {
+  ProfileNotifier(this.ref, this.repository) : super(const AsyncValue.loading()) {
     _init();
   }
 
@@ -39,6 +39,17 @@ ProfileNotifier(this.ref, this.repository) : super(const AsyncValue.loading()) {
   Future<void> fetchUserProfile() async {
     state = const AsyncLoading();
     try {
+      final profile = await repository.fetchUserProfile();
+      state = AsyncData(profile);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+  Future<void> updateUserProfile(String bio, String imageUrl) async {
+    state = const AsyncLoading();
+    try {
+      await repository.updateUserProfile(bio, imageUrl);
+      // Refresh profile after update
       final profile = await repository.fetchUserProfile();
       state = AsyncData(profile);
     } catch (e, st) {
@@ -70,26 +81,30 @@ class ProfileView {
 final profileViewProvider = Provider<ProfileView?>((ref) {
   final userAsync = ref.watch(userFromStorageProvider);
   final profileAsync = ref.watch(profileNotifierProvider);
-  bool isUpdated = false;
-  UserResponse? user;
-  if (userAsync is AsyncData<UserResponse?>) user = userAsync.value;
 
-  ProfileModel? profile;
-  if (profileAsync is AsyncData<ProfileModel?>) {
-    profile = profileAsync.value;
-    isUpdated = true;
-  } 
+  final user = userAsync.asData?.value;
+  final profile = profileAsync.asData?.value;
+  if (profile != null) {
+    // Ưu tiên dữ liệu profile
+    return ProfileView(
+      displayName: user?.userName ?? 'Người dùng',
+      subtitle: user?.role ?? 'Chưa có thông tin',
+      imageUrl: profile.imageUrl,
+      bio: profile.bio,
+      isUpdated: true,
+    );
+  }
 
+  // Fallback sang local user
+  if (user != null) {
+    return ProfileView(
+      displayName: user.userName ?? 'Người dùng',
+      subtitle: user.role ?? user.status ?? 'Chưa có thông tin',
+      imageUrl: null,
+      bio: null,
+      isUpdated: false,
+    );
+  }
 
-  // Prefer remote profile when available for richer fields, but always use
-  // local userName if present for displayName fallback.
-  final displayName = user?.userName ?? (profile?.userId ?? 'Người dùng');
-  final subtitle = user?.role ?? user?.status ?? (profile?.bio ?? 'Chưa có thông tin');
-  final imageUrl = profile?.imageUrl;
-  final bio = profile?.bio;
-
-  // If neither source has meaningful data, return null so UI can show loading/fallback.
-  if (user == null && profile == null) return null;
-
-  return ProfileView(displayName: displayName, subtitle: subtitle, imageUrl: imageUrl, bio: bio, isUpdated: isUpdated);
+  return null;
 });
