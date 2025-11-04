@@ -26,6 +26,25 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   bool _isSaving = false;
   bool _didInitControllers = false;
 
+  String? _validatePersonalInfo() {
+    final fullname = usernameCtrl.text.trim();
+    final phone = phoneCtrl.text.trim();
+    final bankAccount = bankAccountCtrl.text.trim();
+    final bankName = bankNameCtrl.text.trim();
+
+    if (fullname.isEmpty) return 'Họ và tên không được để trống';
+    if (phone.isEmpty) return 'Số điện thoại không được để trống';
+    // simple phone validation: digits only, length 7-15
+    final phoneDigits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) return 'Số điện thoại không hợp lệ';
+    if (bankName.isEmpty) return 'Tên ngân hàng không được để trống';
+    if (bankAccount.isEmpty) return 'Số tài khoản không được để trống';
+    // simple bank account validation: digits only and reasonable length
+    final acctDigits = bankAccount.replaceAll(RegExp(r'[^0-9]'), '');
+    if (acctDigits.length < 6 || acctDigits.length > 30) return 'Số tài khoản không hợp lệ';
+    return null;
+  }
+
   @override
   void dispose() {
     nameCtrl.dispose();
@@ -300,6 +319,14 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                     : IconButton(
                         icon: const Icon(Icons.save, color: Colors.blue),
                         onPressed: () async {
+                          final validationError = _validatePersonalInfo();
+                          if (validationError != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(validationError)),
+                            );
+                            return;
+                          }
+
                           setState(() {
                             _isSaving = true;
                           });
@@ -308,10 +335,10 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                             // Use existing remote imageUrl if any; uploading handled separately via avatar save
                             await profileNotifier.updateUserInformation(
                               profileView?.userID ?? '',
-                              usernameCtrl.text,
-                              phoneCtrl.text,
-                              bankAccountCtrl.text,
-                              bankNameCtrl.text,
+                              usernameCtrl.text.trim(),
+                              phoneCtrl.text.trim(),
+                              bankAccountCtrl.text.trim(),
+                              bankNameCtrl.text.trim(),
                             );
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Thông tin cá nhân đã được cập nhật')),
