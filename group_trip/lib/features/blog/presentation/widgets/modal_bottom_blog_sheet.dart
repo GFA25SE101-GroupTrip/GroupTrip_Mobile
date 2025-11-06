@@ -1,21 +1,82 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/core/providers/image_provider.dart';
+import 'package:group_trip/features/blog/data/blog_model.dart';
+import 'package:group_trip/features/blog/providers/blog_provider.dart';
+import 'package:group_trip/features/blog/providers/tag_provider.dart';
+import 'package:group_trip/features/blog/data/tag_model.dart';
 import 'dart:io';
 
 import 'package:image_picker/image_picker.dart';
 
-class CreateBlogBottomSheet extends StatefulWidget {
+class CreateBlogBottomSheet extends ConsumerStatefulWidget {
   const CreateBlogBottomSheet({super.key});
 
   @override
-  State<CreateBlogBottomSheet> createState() => _CreateBlogBottomSheetState();
+  ConsumerState<CreateBlogBottomSheet> createState() =>
+      _CreateBlogBottomSheetState();
 }
 
-class _CreateBlogBottomSheetState extends State<CreateBlogBottomSheet> {
+class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
   File? _coverImage;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _tagController = TextEditingController();
   final List<String> _tags = [];
+  final List<String> _selectedTagIds = []; // store selected tag ids (to send to backend)
+  List<TagModel> _allTags = [];
+  List<TagModel> _suggestions = [];
+  int _createdTagCount = 0; // how many tags created in this flow
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    _tagController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // fetch all tags once and keep locally for suggestion matching
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final tagNotifier = ref.read(tagNotifierProvider.notifier);
+      try {
+        final list = await tagNotifier.fetchTags();
+        setState(() {
+          _allTags = list;
+        });
+      } catch (_) {}
+    });
+    _tagController.addListener(() {
+      // call async updater (don't await in listener)
+      _updateSuggestions();
+    });
+  }
+
+  Future<void> _updateSuggestions() async {
+    final q = _tagController.text.trim();
+    if (q.isEmpty) {
+      if (_suggestions.isNotEmpty) setState(() => _suggestions = []);
+      return;
+    }
+
+    // ensure we have tags loaded; fetch if empty
+    if (_allTags.isEmpty) {
+      final tagNotifier = ref.read(tagNotifierProvider.notifier);
+      try {
+        final list = await tagNotifier.fetchTags();
+        _allTags = list;
+      } catch (e) {
+        // ignore fetch error; leave suggestions empty
+      }
+    }
+
+    final qlow = q.toLowerCase();
+    final matches = _allTags.where((t) => t.name.toLowerCase().contains(qlow)).toList();
+    if (mounted) setState(() => _suggestions = matches);
+  }
 
   final List<Color> _tagColors = [
     Color(0xFFADD8E6),
@@ -43,17 +104,103 @@ class _CreateBlogBottomSheetState extends State<CreateBlogBottomSheet> {
     }
   }
 
-  void _addTag(String tag) {
+  Future<void> _createBlog() async {
+    final title = _titleController.text;
+    final content = _contentController.text;
+    final coverImage = _coverImage;
+    List<BlogTag> tags = [];
+
+    final selectedTagIds = _selectedTagIds;
+
+    tags = selectedTagIds.map((id) {
+      return BlogTag(blogId: '3fa85f64-5717-4562-b3fc-2c963f66afa6', tagId: id);
+    }).toList();
+    
+    final blogNotifier = ref.read(blogNotifierProvider.notifier);
+    BlogCreateModel data = BlogCreateModel(
+      title: title,
+      content: content,
+      publish_date: DateTime.now().toUtc().toIso8601String(),
+      tags: tags,
+    );
+    print('Creating blog with data: ${data.toJson()}');
+    final blogId = await blogNotifier.createBlog(data);
+    // upload cover image if exists
+    print(coverImage);
+    if (coverImage != null && blogId != null) {
+      try {
+        await ref.read(imageProvider.notifier).uploadImage(coverImage, blogId);
+        
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng bài thành công')));
+      } catch (e) {
+        // ignore: avoid_print
+        print('Failed to upload cover image: $e');
+      }
+    }
+    ref.refresh(blogListProvider);
+
+  }
+
+  Future<void> _addTag(String tag) async {
     if (tag.isNotEmpty && !_tags.contains(tag)) {
-      setState(() {
-        _tags.add(tag);
-      });
+      final tagNotifier = ref.read(tagNotifierProvider.notifier);
+      // check total selected limit
+      if (_selectedTagIds.length >= 5) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chỉ được chọn tối đa 5 tag')));
+        _tagController.clear();
+        return;
+      }
+      // creating new tags per flow limited to 3
+      if (_createdTagCount >= 3) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chỉ được tạo tối đa 3 tag mới')));
+        _tagController.clear();
+        return;
+      }
+
+      try {
+        // If tag exists in local cache, select it instead of creating
+        final existing = _allTags.firstWhere((t) => t.name.toLowerCase() == tag.toLowerCase(), orElse: () => TagModel(id: '', name: '', description: ''));
+        if (existing.id.isNotEmpty) {
+          if (!_selectedTagIds.contains(existing.id) && _selectedTagIds.length < 5) {
+            setState(() {
+              _selectedTagIds.add(existing.id);
+              _tags.add(existing.name);
+            });
+          }
+        } else {
+          // create tag on server
+          await tagNotifier.addTag(tag, 'This is blog tag created from traveller');
+          // re-fetch tags and try to find the created tag to get its id
+          final fresh = await tagNotifier.fetchTags();
+          // update local cache
+          setState(() => _allTags = fresh);
+          final created = fresh.firstWhere(
+            (t) => t.name.toLowerCase() == tag.toLowerCase(),
+            orElse: () => TagModel(id: '', name: '', description: ''),
+          );
+          setState(() {
+            if (created.id.isNotEmpty) {
+              if (!_selectedTagIds.contains(created.id)) _selectedTagIds.add(created.id);
+              if (!_tags.contains(created.name)) _tags.add(created.name);
+              _createdTagCount++;
+            } else {
+              // fallback: add by name
+              if (!_tags.contains(tag)) _tags.add(tag);
+            }
+          });
+        }
+      } catch (e) {
+        // ignore: avoid_print
+        print('Failed to create/select tag: $e');
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tạo tag thất bại')));
+      }
     }
     _tagController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    final uploadState = ref.watch(imageProvider);
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.80,
@@ -80,7 +227,7 @@ class _CreateBlogBottomSheetState extends State<CreateBlogBottomSheet> {
                       decoration: BoxDecoration(
                         color: Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(12),
-                       ),
+                      ),
                     ),
                   ),
 
@@ -181,28 +328,70 @@ class _CreateBlogBottomSheetState extends State<CreateBlogBottomSheet> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children:
-                        _tags.map((tag) {
-                          final color =
-                              _tagColors[_tags.indexOf(tag) %
-                                  _tagColors.length];
-                          return Chip(
-                            label: Text(
-                              '#$tag',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            backgroundColor: color.withOpacity(0.3),
-                            side: BorderSide.none,
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted: () {
-                              setState(() => _tags.remove(tag));
+                  // Show selected tags as chips
+                  if (_tags.isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _tags.map((name) {
+                        final idx = _tags.indexOf(name);
+                        final color = _tagColors[idx % _tagColors.length];
+                        return InputChip(
+                          label: Text('#$name', style: const TextStyle(fontSize: 12)),
+                          onDeleted: () {
+                            // find corresponding id by name in _allTags
+                            final model = _allTags.firstWhere((t) => t.name == name, orElse: () => TagModel(id: '', name: '', description: ''));
+                            setState(() {
+                              if (model.id.isNotEmpty) _selectedTagIds.remove(model.id);
+                              _tags.remove(name);
+                            });
+                          },
+                          backgroundColor: color.withOpacity(0.2),
+                        );
+                      }).toList(),
+                    ),
+
+                  // Suggestions list (show while typing)
+                  if (_suggestions.isNotEmpty)
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 160),
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _suggestions.length,
+                        itemBuilder: (ctx, i) {
+                          final t = _suggestions[i];
+                          final alreadySelected = _selectedTagIds.contains(t.id);
+                          return ListTile(
+                            title: Text(t.name),
+                            trailing: alreadySelected ? const Icon(Icons.check, color: Colors.green) : null,
+                            onTap: () {
+                              if (_selectedTagIds.length >= 5 && !alreadySelected) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chỉ được chọn tối đa 5 tag')));
+                                return;
+                              }
+                              setState(() {
+                                if (!alreadySelected) {
+                                  _selectedTagIds.add(t.id);
+                                  _tags.add(t.name);
+                                } else {
+                                  _selectedTagIds.remove(t.id);
+                                  _tags.remove(t.name);
+                                }
+                                _suggestions = [];
+                                _tagController.clear();
+                              });
                             },
                           );
-                        }).toList(),
-                  ),
+                        },
+                      ),
+                    ),
 
                   const SizedBox(height: 16),
 
@@ -234,22 +423,8 @@ class _CreateBlogBottomSheetState extends State<CreateBlogBottomSheet> {
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.grey.shade700,
-                            side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text("Lưu nháp"),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: _createBlog,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF007BFF),
                             shape: RoundedRectangleBorder(
@@ -257,8 +432,8 @@ class _CreateBlogBottomSheetState extends State<CreateBlogBottomSheet> {
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                          child: const Text(
-                            "Đăng bài",
+                          child: Text(
+                            uploadState.isLoading ? 'Đang đăng...' : "Đăng bài",
                             style: TextStyle(color: Colors.white),
                           ),
                         ),

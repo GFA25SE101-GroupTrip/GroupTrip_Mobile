@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:group_trip/shared/widgets/atoms/chip_tag.dart';
 
 class BlogCard extends StatelessWidget {
-  final String imageUrl;
+  final String? imageUrl;
   final String title;
   final String author;
-  final String authorAvatar;
+  final String? authorAvatar;
   final List<String> tags;
   final int likes;
   final String category; // ví dụ: agency, traveler
@@ -13,10 +13,10 @@ class BlogCard extends StatelessWidget {
 
   const BlogCard({
     super.key,
-    required this.imageUrl,
+    this.imageUrl,
     required this.title,
     required this.author,
-    required this.authorAvatar,
+    this.authorAvatar,
     required this.tags,
     required this.likes,
     required this.category,
@@ -49,12 +49,7 @@ class BlogCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Image.network(
-                  imageUrl,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                child: _buildCover(imageUrl, title),
               ),
             ],
           ),
@@ -80,7 +75,7 @@ class BlogCard extends StatelessWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: NetworkImage(authorAvatar),
+                  backgroundImage: _buildAuthorImage(authorAvatar),
                   radius: 14,
                 ),
                 const SizedBox(width: 8),
@@ -95,5 +90,44 @@ class BlogCard extends StatelessWidget {
       ),
     )
     );
+  }
+
+  // Helper to build cover image. If imageUrl is null or not http(s), show a
+  // random placeholder from picsum using a seed derived from title.
+  Widget _buildCover(String? imageUrl, String seedValue) {
+    final seed = seedValue.hashCode.abs();
+    if (imageUrl != null && imageUrl.trim().isNotEmpty && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+      return Image.network(
+        imageUrl,
+        height: 180,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stack) {
+          return Image.network(
+            'https://picsum.photos/seed/$seed/800/400',
+            height: 180,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    }
+
+    return Image.network(
+      'https://picsum.photos/seed/$seed/800/400',
+      height: 180,
+      width: double.infinity,
+      fit: BoxFit.cover,
+    );
+  }
+
+  ImageProvider _buildAuthorImage(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.trim().isNotEmpty && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'))) {
+      return NetworkImage(avatarUrl);
+    }
+
+    // fallback avatar (picsum seeded by author name)
+    final seed = author.hashCode.abs();
+    return NetworkImage('https://i.pravatar.cc/150?img=${(seed % 70) + 1}');
   }
 }

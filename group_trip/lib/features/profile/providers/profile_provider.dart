@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:group_trip/core/api/api_client.dart';
 import 'package:group_trip/core/providers/api_client_provider.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
 import 'package:group_trip/features/auth/data/user_model.dart';
@@ -71,12 +70,34 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel?>> {
       state = AsyncError(e, st);
     }
   }
+
+  /// Clear the cached profile (used when user logs out)
+  void clearProfile() {
+    state = const AsyncData(null);
+  }
 }
 
 final profileNotifierProvider =
     StateNotifierProvider<ProfileNotifier, AsyncValue<ProfileModel?>>((ref) {
   print('✅ profileNotifierProvider initialized');
-  return ProfileNotifier(ref, ref.watch(profileRepositoryProvider));
+  final notifier = ProfileNotifier(ref, ref.watch(profileRepositoryProvider));
+
+  // React to login/logout: when `userFromStorageProvider` transitions from
+  // null -> non-null we fetch the profile; when it goes from non-null ->
+  // null we clear the profile state.
+  ref.listen<AsyncValue<UserResponse?>>(userFromStorageProvider, (previous, next) {
+    final prevUser = previous?.asData?.value;
+    final nextUser = next.asData?.value;
+    if (prevUser == null && nextUser != null) {
+      // token/user became available (e.g. after login)
+      notifier.fetchUserProfile();
+    } else if (prevUser != null && nextUser == null) {
+      // user logged out: clear cached profile
+      notifier.clearProfile();
+    }
+  });
+
+  return notifier;
 });
 
 
@@ -117,9 +138,9 @@ final profileViewProvider = Provider<ProfileView?>((ref) {
   // Fallback sang local user
   if (user != null) {
     return ProfileView(
-      userID: user.userId ?? 'unknown',
-      displayName: user.userName ?? 'Người dùng',
-      subtitle: user.role ?? user.status ?? 'Chưa có thông tin',
+      userID: user.userId,
+      displayName: user.userName,
+      subtitle: user.role,
       imageUrl: null,
       bio: null,
       isUpdated: false,

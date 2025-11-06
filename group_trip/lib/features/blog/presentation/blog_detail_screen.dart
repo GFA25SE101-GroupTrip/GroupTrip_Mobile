@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:group_trip/shared/widgets/atoms/chip_tag.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/features/blog/data/blog_model.dart';
+// import 'package:group_trip/shared/widgets/atoms/chip_tag.dart';
+import 'package:group_trip/core/providers/user_storage_provider.dart';
 
-class BlogDetailScreen extends StatelessWidget {
-  const BlogDetailScreen({super.key});
+class BlogDetailScreen extends ConsumerWidget {
+  final BlogModel blog;
+  const BlogDetailScreen({super.key, required this.blog});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final storedUser = ref.watch(userFromStorageProvider).asData?.value;
+    final isOwner = storedUser != null && storedUser.userId == blog.userId;
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -19,24 +25,30 @@ class BlogDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Ảnh bìa + tag
-            
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                blog.coverImage ?? 'https://picsum.photos/seed/2/800/400',
+                fit: BoxFit.cover,
+              ),
+            ),
             const SizedBox(height: 16),
 
             // Tiêu đề & thông tin tác giả
-            const Text(
-              "Khám phá vẻ đẹp hùng vĩ của Sapa trong mùa lúa chín",
+            Text(
+              blog.title,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.4),
             ),
             const SizedBox(height: 8),
 
             Row(
               children: [
-                const CircleAvatar(
+               CircleAvatar(
                   radius: 16,
-                  backgroundImage: NetworkImage("https://i.pravatar.cc/100?img=1"),
+                  backgroundImage: NetworkImage(blog.userImage),
                 ),
                 const SizedBox(width: 8),
-                const Text("Saigon Tourist",
+                Text(blog.fullName,
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const Spacer(),
                
@@ -46,71 +58,54 @@ class BlogDetailScreen extends StatelessWidget {
 
             Wrap(
               spacing: 8,
-              children: [
-                buildChip(" #nature"),
-                buildChip(" #mountain"),  
-                buildChip(" #sapa"),
-              ],
+              children: blog.tags
+                  .map((tag) => _buildTag(tag.name, Colors.blueAccent))
+                  .toList(),
             ),
             const SizedBox(height: 16),
 
-            // Nội dung bài viết
-            const Text(
-              "Sapa luôn là điểm đến hấp dẫn với những du khách yêu thích vẻ đẹp thiên nhiên, "
-              "mùa lúa chín mang đến một phong cảnh rực rỡ sắc vàng trải dài khắp các thung lũng.",
-              style: TextStyle(fontSize: 14, height: 1.6),
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                "https://picsum.photos/600/300?1",
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            const SizedBox(height: 16),
-            // ClipRRect(
-            //   borderRadius: BorderRadius.circular(12),
-            //   child: Image.network(
-            //     "https://images.unsplash.com/photo-1523875194681-bedd468c58bf?w=800",
-            //     fit: BoxFit.cover,
-            //   ),
-            // ),
-            const SizedBox(height: 16),
-            const Text(
-              "Người dân nơi đây luôn nồng hậu, những thửa ruộng bậc thang trải dài như những dải lụa vàng óng ánh khiến du khách không thể rời mắt.",
+            Text(
+              blog.content,
               style: TextStyle(fontSize: 14, height: 1.6),
             ),
 
             const SizedBox(height: 20),
-            // Nút hành động
+            // Nút hành động (chỉ hiển thị nếu người đang đăng nhập là chủ bài)
             Row(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: const Text("Chỉnh sửa"),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.blue,
-                      side: const BorderSide(color: Colors.blue),
-                    ),
-                  ),
-                ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text("Xóa bài"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade400,
-                      foregroundColor: Colors.white,
+                if (isOwner)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        // Simple confirmation dialog before delete. Actual delete
+                        // implementation should call repository/api.
+                        final ok = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Xác nhận'),
+                            content: const Text('Bạn có chắc muốn xóa bài viết này?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Hủy')),
+                              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Xóa')),
+                            ],
+                          ),
+                        );
+                        if (ok == true) {
+                          // TODO: gọi API xóa bài viết ở đây
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text("Xóa bài"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade400,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
-                  ),
-                ),
+                  )
+                else
+                  const SizedBox.shrink(),
               ],
             ),
 
