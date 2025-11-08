@@ -7,6 +7,20 @@ class ProfileRepository {
 
   ProfileRepository({required this.remoteDataSource});
 
+  Future<void> updateUserBio(String userProfileID, String bio, String imageUrl) async {
+    try {
+      // ignore: avoid_print
+      print('🔁 [ProfileRepository] updateUserBio(bio=${bio}, imageUrl=${imageUrl})');
+      await remoteDataSource.updateUserBio(userProfileID, bio, imageUrl);
+      // ignore: avoid_print
+      print('✅ [ProfileRepository] updateUserBio completed');
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ [ProfileRepository] updateUserBio failed: $e');
+      rethrow;
+    }
+  }
+
   Future<ProfileModel> fetchUserProfile() async {
     try {
       // ignore: avoid_print
@@ -49,6 +63,27 @@ class ProfileRepository {
     } catch (e) {
       // ignore: avoid_print
       print('❌ [ProfileRepository] updateUserInformation failed: $e');
+      rethrow;
+    }
+  }
+}
+
+class UserInformationRespository {
+  final ProfileRemoteDataSource remoteDataSource;
+
+  UserInformationRespository({required this.remoteDataSource});
+
+  Future<UserInformation> fetchUserInformation(String userID) async {
+    try {
+      // ignore: avoid_print
+      print('🔁 [UserInformationRespository] fetchUserInformation(userID=${userID})');
+      final res = await remoteDataSource.fetchUserInformation(userID);
+      // ignore: avoid_print
+      print('✅ [UserInformationRespository] fetchUserInformation completed');
+      return res;
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ [UserInformationRespository] fetchUserInformation failed: $e');
       rethrow;
     }
   }

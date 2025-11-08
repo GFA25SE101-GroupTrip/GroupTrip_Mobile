@@ -13,6 +13,7 @@ class ProfileHeader extends ConsumerWidget {
   final String? avatarUrl;
   final VoidCallback onEditAvatar; // open picker
   final VoidCallback onSaveAvatarBio;
+  final VoidCallback onUpdateBio;
   final bool isEditing;
   const ProfileHeader({
     Key? key,
@@ -23,6 +24,7 @@ class ProfileHeader extends ConsumerWidget {
     required this.avatarUrl,
     required this.onEditAvatar,
     required this.onSaveAvatarBio,
+    required this.onUpdateBio,
     required this.isEditing,
   }) : super(key: key);
 
@@ -223,7 +225,7 @@ class ProfileHeader extends ConsumerWidget {
                   ),
                 )
                 else ElevatedButton.icon(
-                  onPressed: onSaveAvatarBio,
+                  onPressed: onUpdateBio,
                   icon: const Icon(Icons.save),
                   label: const Text('Cập nhật'),
                   style: ElevatedButton.styleFrom(

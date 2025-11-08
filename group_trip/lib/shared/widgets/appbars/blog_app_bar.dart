@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/blog/presentation/widgets/blog_search_screen.dart';
 
 class BlogAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Function(String)? onSearch;
@@ -79,18 +80,18 @@ class BlogAppBar extends StatelessWidget implements PreferredSizeWidget {
             : Padding(
             key: const ValueKey('searchIcon'),
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SizedBox(
+                child: SizedBox(
               height: 52,
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
               icon: Icon(Icons.search, color: Colors.grey[800]),
               onPressed: () {
-                setState(() => _isSearching = true);
-                // Delay focusing until the frame completes
-                Future.delayed(Duration.zero, () {
-                  _focusNode.requestFocus();
-                });
+                // Navigate to dedicated search screen instead of inline search
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (ctx) => const BlogSearchScreen()),
+                );
               },
                 ),
               ),

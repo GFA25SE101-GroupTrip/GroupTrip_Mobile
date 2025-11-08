@@ -110,6 +110,54 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     
   }
 
+  Future<void> _updateBio(String url, String userProfileId) async {
+    setState(() {
+      _isSaving = true;
+    });
+    String imageUrl = url;
+    print('🔁 _updateBio called with url=$url');
+    // If there's an avatar selected, upload it first
+    if (_avatarFile != null) {
+      try {
+        imageUrl = await UploadImageService().uploadImage(_avatarFile!);
+        // ignore: avoid_print
+        print('✅ Image uploaded: $imageUrl');
+      } catch (e) {
+        // ignore: avoid_print
+        print('❌ Image upload failed: $e');
+      }
+    }
+    try {
+      final profileNotifier = ref.read(profileNotifierProvider.notifier);
+      // Read current profile id so we call the correct update API
+      final profileId = ref.read(profileViewProvider)?.userProfileId ?? '';
+      // diagnostic: print notifier identity before calling
+      // ignore: avoid_print
+      print('DBG: calling updateUserBio on notifier=$profileNotifier (hash=${profileNotifier.hashCode}) profileId=$profileId with bio="${bioCtrl.text}" imageUrl=$imageUrl');
+      try {
+        await profileNotifier.updateUserBio(profileId, bioCtrl.text, imageUrl);
+        // ignore: avoid_print
+        print('✅ Bio update requested: profileId=$profileId bio=${bioCtrl.text}');
+      } catch (e) {
+        // ignore: avoid_print
+        print('ERR: updateUserBio threw: $e');
+        rethrow;
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ Failed to update bio on server: $e');
+      rethrow;
+    }finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      } else {
+        _isSaving = false;
+      }
+    }
+  }
+
   Future<String?> _showBankPicker() async {
     final banks = <String>[
       'Vietcombank',
@@ -251,21 +299,24 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
   Widget _inputField(
     TextEditingController controller,
+    String? initialValue,
     String label, {
     int minLines = 1,
     int? maxLines,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
         minLines: minLines,
         maxLines: maxLines,
         expands: false,
         style: const TextStyle(fontSize: 16, color: Colors.black87),
         decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(
+          // Show a single text: if controller is empty, display the provided initialValue (or label) as hint.
+          // We intentionally do not set labelText to avoid having two separate texts.
+          hintText: initialValue ?? label,
+          hintStyle: const TextStyle(
             color: Color(0xFF7F7FD5), // màu nhấn tím xanh gradient
             fontWeight: FontWeight.w500,
           ),
@@ -417,6 +468,23 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                     );
                   }
                 },
+
+                onUpdateBio: () async {
+                  try {
+                    await _updateBio(profileView?.imageUrl ?? '', profileView?.userProfileId ?? '');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Bio đã được cập nhật'),
+                      ),
+                    );
+                  } catch (_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Có lỗi khi cập nhật bio'),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
 
@@ -439,8 +507,14 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                   _inputField(
                     usernameCtrl,
                     profileView?.fullname ?? "Họ và tên",
+                    "Họ và tên",
                   ),
-                  _inputField(phoneCtrl, "Số điện thoại"),
+
+                  _inputField(
+                    phoneCtrl,
+                    profileView?.phoneNumber ?? "Số điện thoại",
+                    "Số điện thoại",
+                  ),
                 ],
               ),
             ),
@@ -462,7 +536,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  _inputField(bankAccountCtrl, "Bank Account"),
+                  _inputField(bankAccountCtrl, profileView?.bankAccount, "Số tài khoản"),
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -491,7 +565,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                           children: [
                             Text(
                               bankNameCtrl.text.isEmpty
-                                  ? 'Chọn ngân hàng'
+                                  ? (profileView?.bankName ?? 'Chọn tên ngân hàng')
                                   : bankNameCtrl.text,
                             ),
                             const Icon(Icons.keyboard_arrow_down),

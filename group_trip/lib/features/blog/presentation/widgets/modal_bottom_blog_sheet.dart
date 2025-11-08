@@ -27,6 +27,11 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
   List<TagModel> _allTags = [];
   List<TagModel> _suggestions = [];
   int _createdTagCount = 0; // how many tags created in this flow
+  // Validation error messages (shown under inputs)
+  String? _imageError;
+  String? _titleError;
+  String? _contentError;
+  String? _tagsError;
 
   @override
   void dispose() {
@@ -52,6 +57,27 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
     _tagController.addListener(() {
       // call async updater (don't await in listener)
       _updateSuggestions();
+    });
+    // track title/content changes to update validation state and clear errors when fixed
+    _titleController.addListener(() {
+      final len = _titleController.text.trim().length;
+      if (_titleError != null && len >= 5 && len <= 100) {
+        setState(() => _titleError = null);
+      } else {
+        setState(() {});
+      }
+    });
+    _contentController.addListener(() {
+      final len = _contentController.text.trim().length;
+      if (_contentError != null && len >= 100 && len <= 500) {
+        setState(() => _contentError = null);
+      } else {
+        setState(() {});
+      }
+    });
+    // clear tag error when user types
+    _tagController.addListener(() {
+      if (_tagsError != null && _selectedTagIds.length >= 2) setState(() => _tagsError = null);
     });
   }
 
@@ -100,13 +126,47 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
     if (picked != null) {
       setState(() {
         _coverImage = File(picked.path);
+        _imageError = null; // clear image error when user picks one
       });
     }
   }
 
+  bool _validate() {
+    var ok = true;
+    setState(() {
+      _imageError = null;
+      _titleError = null;
+      _contentError = null;
+      _tagsError = null;
+
+      if (_coverImage == null) {
+        _imageError = 'Vui lòng chọn ảnh bìa trước khi đăng';
+        ok = false;
+      }
+      final title = _titleController.text.trim();
+      if (title.length < 5 || title.length > 100) {
+        _titleError = 'Tiêu đề phải có 5-100 ký tự';
+        ok = false;
+      }
+      final content = _contentController.text.trim();
+      if (content.length < 100 || content.length > 500) {
+        _contentError = 'Nội dung phải có tối thiểu 100 chữ và tối đa 500 chữ';
+        ok = false;
+      }
+      if (_selectedTagIds.length < 2) {
+        _tagsError = 'Vui lòng chọn ít nhất 2 tag';
+        ok = false;
+      } else if (_selectedTagIds.length > 5) {
+        _tagsError = 'Tối đa 5 tag';
+        ok = false;
+      }
+    });
+    return ok;
+  }
+
   Future<void> _createBlog() async {
-    final title = _titleController.text;
-    final content = _contentController.text;
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
     final coverImage = _coverImage;
     List<BlogTag> tags = [];
 
@@ -116,7 +176,10 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
       return BlogTag(blogId: '3fa85f64-5717-4562-b3fc-2c963f66afa6', tagId: id);
     }).toList();
     
-    final blogNotifier = ref.read(blogNotifierProvider.notifier);
+    // Validation
+    // Validation (show inline errors)
+  if (!_validate()) return;
+  final blogNotifier = ref.read(blogNotifierProvider.notifier);
     BlogCreateModel data = BlogCreateModel(
       title: title,
       content: content,
@@ -127,17 +190,18 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
     final blogId = await blogNotifier.createBlog(data);
     // upload cover image if exists
     print(coverImage);
-    if (coverImage != null && blogId != null) {
-      try {
-        await ref.read(imageProvider.notifier).uploadImage(coverImage, blogId);
-        
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng bài thành công')));
-      } catch (e) {
-        // ignore: avoid_print
-        print('Failed to upload cover image: $e');
+      if (blogId != null) {
+        try {
+          await ref.read(imageProvider.notifier).uploadImage(coverImage!, blogId);
+
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng bài thành công')));
+        } catch (e) {
+          // ignore: avoid_print
+          print('Failed to upload cover image: $e');
+        }
       }
-    }
-    ref.refresh(blogListProvider);
+    // refresh the blog list provider (ignore the returned value)
+    var _ = ref.refresh(blogListProvider);
 
   }
 
@@ -165,6 +229,7 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
             setState(() {
               _selectedTagIds.add(existing.id);
               _tags.add(existing.name);
+              _tagsError = null;
             });
           }
         } else {
@@ -183,6 +248,7 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
               if (!_selectedTagIds.contains(created.id)) _selectedTagIds.add(created.id);
               if (!_tags.contains(created.name)) _tags.add(created.name);
               _createdTagCount++;
+              _tagsError = null;
             } else {
               // fallback: add by name
               if (!_tags.contains(tag)) _tags.add(tag);
@@ -281,6 +347,12 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
                               ),
                     ),
                   ),
+                  // Image error message
+                  if (_imageError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6.0),
+                      child: Text(_imageError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                    ),
 
                   const SizedBox(height: 16),
 
@@ -296,6 +368,7 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
                     decoration: InputDecoration(
                       hintText: "Nhập tiêu đề bài viết...",
                       counterText: '',
+                      errorText: _titleError,
                       filled: true,
                       fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
@@ -327,6 +400,12 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
                       ),
                     ),
                   ),
+                  // tag error message
+                  if (_tagsError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6.0),
+                      child: Text(_tagsError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                    ),
                   const SizedBox(height: 8),
                   // Show selected tags as chips
                   if (_tags.isNotEmpty)
@@ -344,6 +423,12 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
                             setState(() {
                               if (model.id.isNotEmpty) _selectedTagIds.remove(model.id);
                               _tags.remove(name);
+                              // update tags error state
+                              if (_selectedTagIds.length < 2) {
+                                _tagsError = 'Vui lòng chọn ít nhất 2 tag';
+                              } else {
+                                _tagsError = null;
+                              }
                             });
                           },
                           backgroundColor: color.withOpacity(0.2),
@@ -380,6 +465,8 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
                                 if (!alreadySelected) {
                                   _selectedTagIds.add(t.id);
                                   _tags.add(t.name);
+                                    // clear tag error if now meets minimum
+                                    if (_selectedTagIds.length >= 2) _tagsError = null;
                                 } else {
                                   _selectedTagIds.remove(t.id);
                                   _tags.remove(t.name);
@@ -404,11 +491,12 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
                   TextField(
                     controller: _contentController,
                     maxLines: 6,
-                    maxLength: 2000,
+                    maxLength: 500,
                     decoration: InputDecoration(
                       hintText: "Chia sẻ trải nghiệm du lịch của bạn...",
                       alignLabelWithHint: true,
                       filled: true,
+                      errorText: _contentError,
                       fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),

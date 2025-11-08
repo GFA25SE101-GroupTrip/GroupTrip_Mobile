@@ -3,15 +3,35 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/features/blog/data/blog_model.dart';
 // import 'package:group_trip/shared/widgets/atoms/chip_tag.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
+import 'package:group_trip/features/blog/providers/blog_provider.dart';
 
 class BlogDetailScreen extends ConsumerWidget {
   final BlogModel blog;
   const BlogDetailScreen({super.key, required this.blog});
-
+  // Accept blogId explicitly to avoid any accidental capture/stale state.
+  Future<void> _deleteBlog(BuildContext context, WidgetRef ref, String blogId) async {
+    final blogNotifier = ref.read(blogNotifierProvider.notifier);
+    try {
+      // Log the id we're about to delete so you can compare with server logs
+      print('Deleting blog with ID (from _deleteBlog param): $blogId');
+      await blogNotifier.deleteBlog(blogId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Xóa bài viết thành công')),
+      );
+      ref.refresh(blogListProvider);
+      Navigator.of(context).pop();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi xóa bài viết: $e')),
+      );
+    }
+  }
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final storedUser = ref.watch(userFromStorageProvider).asData?.value;
-    final isOwner = storedUser != null && storedUser.userId == blog.userId;
+  // Log blog id on build so we can verify which blog detail is shown.
+  print('BlogDetailScreen build for blogId=${blog.blogId}');
+  final storedUser = ref.watch(userFromStorageProvider).asData?.value;
+  final isOwner = storedUser != null && storedUser.userId == blog.userId;
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -92,8 +112,8 @@ class BlogDetailScreen extends ConsumerWidget {
                           ),
                         );
                         if (ok == true) {
-                          // TODO: gọi API xóa bài viết ở đây
-                          Navigator.of(context).pop();
+                          // pass blogId explicitly
+                          _deleteBlog(context, ref, blog.blogId);
                         }
                       },
                       icon: const Icon(Icons.delete_outline, size: 18),

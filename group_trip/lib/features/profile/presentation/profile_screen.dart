@@ -187,7 +187,10 @@ class ProfileScreen extends ConsumerWidget {
               icon: Icons.account_balance_wallet_outlined,
               title: "My Wallet",
               subtitle: "Quản lý số dư & thanh toán",
-              onTap: () {},
+              onTap: () {
+                // Navigate to wallet screen
+                context.push('/profile/wallet');
+              },
             ),
             _buildMenuItem(
               icon: Icons.star_border,

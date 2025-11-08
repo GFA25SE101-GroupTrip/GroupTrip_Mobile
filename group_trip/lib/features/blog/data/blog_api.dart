@@ -36,11 +36,15 @@ class BlogRemoteDataSource {
     }
   }
 
-  Future<List<BlogModel>> fetchBlogs() async {
+  Future<List<BlogModel>> fetchBlogs(String? fullname, String? title) async {
       print('➡️ [BlogAPI] GET /blogs -> service=user');
       final response = await api.get(
         'user',
         '/api/blogs',
+        queryParameters: {
+          'fullName': fullname,
+          'title': title,
+        },
       );
       if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
         // success
@@ -70,6 +74,23 @@ class BlogRemoteDataSource {
           'Failed to fetch blogs: status=${response.statusCode}',
         );
       }
+  }
+
+  Future<void> deleteBlog(String blogId) async {
+    print('➡️ [BlogAPI] DELETE /blogs/$blogId -> service=user');
+    final response = await api.delete(
+      'user',
+      '/api/blogs/$blogId',
+    );
+    if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+      // success
+      // ignore: avoid_print
+      print('✅ Blog deleted successfully');
+    } else {
+      throw Exception(
+        'Failed to delete blog: status=${response.statusCode}',
+      );
+    }
   }
     
 }

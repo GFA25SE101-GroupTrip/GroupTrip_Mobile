@@ -8,6 +8,7 @@ import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:group_trip/features/blog/presentation/blog_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_detail_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_screen.dart';
+import 'package:group_trip/features/wallet/presentation/wallet_screen.dart';
 import 'package:group_trip/shared/main_layout.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
@@ -56,6 +57,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
             path: '/profile/detail',
             builder: (context, state) => const ProfileDetailScreen(),
+          ),
+       GoRoute(
+            path: '/profile/wallet',
+            builder: (context, state) => const MyWalletScreen(),
           ),
       GoRoute(
         path: '/',

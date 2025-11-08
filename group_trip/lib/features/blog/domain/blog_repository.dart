@@ -11,6 +11,14 @@ class BlogRepository {
   }
 
   Future<List<BlogModel>> fetchBlogs() async {
-    return await remoteDataSource.fetchBlogs();
+    return await remoteDataSource.fetchBlogs(null, null);
+  }
+
+  Future<List<BlogModel>> fetchBlogsByFilter(String? fullName, String? title) async {
+    return await remoteDataSource.fetchBlogs(fullName, title);
+  }
+
+  Future<void> deleteBlog(String blogId) async {
+    await remoteDataSource.deleteBlog(blogId);
   }
 }

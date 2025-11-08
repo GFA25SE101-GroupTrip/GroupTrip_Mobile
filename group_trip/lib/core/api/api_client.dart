@@ -60,7 +60,8 @@ class ApiClient {
     final options = BaseOptions(
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      // Increase receive timeout to allow slightly slower responses (was 10s)
+      receiveTimeout: const Duration(seconds: 20),
       headers: {'Content-Type': 'application/json'},
     );
 
@@ -200,6 +201,21 @@ class ApiClient {
     }
 
     return dio.put(path, data: data);
+  }
+
+  Future<Response> delete(String serviceKey, String path, {dynamic data}) {
+    final dio = _dioFor(serviceKey);
+    // ignore: avoid_print
+    print('➡️ [ApiClient] DELETE service=$serviceKey path=$path data=$data base=${dio.options.baseUrl}');
+
+    final base = dio.options.baseUrl;
+    if ((base.isEmpty) && path.startsWith('/')) {
+      throw ArgumentError('No API base URL configured for service "$serviceKey". '
+          'Set API_BASE_URL or API_BASE_${serviceKey.toUpperCase()} in your environment, or pass an absolute URL to the request. '
+          'Currently dio.options.baseUrl="${base}"');
+    }
+
+    return dio.delete(path, data: data);
   }
   /// Convenience helpers that use 'default' service.
   Future<Response> getDefault(String path, {Map<String, dynamic>? queryParameters}) => get('default', path, queryParameters: queryParameters);

@@ -43,6 +43,7 @@ class BlogScreen extends ConsumerWidget {
               final b = blogs[index];
               return BlogCard(
                 viewDetail: () {
+                  print('Tapped blog item index=$index id=${b.blogId}');
                   Navigator.push(
                     context,
                     MaterialPageRoute(

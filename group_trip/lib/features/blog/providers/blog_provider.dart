@@ -71,4 +71,26 @@ class BlogNotifier extends StateNotifier<AsyncValue<void>> {
       return null;
     }
   }
+
+  Future<void> deleteBlog(String blogId) async {
+    state = const AsyncValue.loading();
+    try {
+      await repository.deleteBlog(blogId);
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<List<BlogModel>?> fetchBlogsByFilter(String? fullName, String? title) async {
+    state = const AsyncValue.loading();
+    try {
+      final response = await repository.fetchBlogsByFilter(fullName, title);
+      state = const AsyncValue.data(null);
+      return response;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return null;
+    }
+  }
 }

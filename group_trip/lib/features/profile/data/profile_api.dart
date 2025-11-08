@@ -69,6 +69,65 @@ class ProfileRemoteDataSource {
     }
   }
 
+  Future<void> updateUserBio(
+    String userProfileID,
+    String bio,
+    String imageUrl,
+  ) async {
+    final response = await api.put(
+      'user',
+      '/api/profiles/user',
+      data: {'userProfileId': userProfileID, 'bio': bio, 'image_url': imageUrl},
+    );
+
+    if (response.statusCode != null &&
+        response.statusCode! >= 200 &&
+        response.statusCode! < 300) {
+      // success
+      // ignore: avoid_print
+      print('✅ Profile updated successfully');
+      // ignore: avoid_print
+      print(response.data);
+    } else {
+      throw Exception(
+        'Failed to update profile: status=${response.statusCode}',
+      );
+    }
+  }
+
+  Future<UserInformation> fetchUserInformation(String userId) async {
+    // Implementation for fetching user information if needed
+    print(
+      '➡️ [ProfileAPI] GET /api/auth/getuserid/{userId} -> service=auth userId=$userId',
+    );
+    try {
+      // Ensure the path contains a separating slash before the userId
+      final path = '/api/auth/getuserid$userId';
+      final response = await api.get('auth', path);
+      print(
+        '⬅️ [ProfileAPI] GET /api/auth/userinformation status=${response.statusCode} data=${response.data}',
+      );
+
+      if (response.statusCode == 200) {
+        // Process the user information
+        print('User information fetched successfully: ${response.data}');
+        dynamic payload = response.data;
+        if (payload is Map && payload.containsKey('data')) {
+          payload = payload['data'];
+        }
+
+        return UserInformation.fromJson(payload);
+      } else {
+        throw Exception(
+          'Failed to fetch user information: status=${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('Error fetching user information: $e');
+      rethrow;
+    }
+  }
+
   Future<void> updateUserInformation(
     String userID,
     String fullname,
