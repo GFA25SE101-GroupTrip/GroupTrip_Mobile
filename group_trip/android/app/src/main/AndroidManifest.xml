@@ -30,6 +30,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="myapp" android:host="payment-return"/>
                 <data android:scheme="com.googleusercontent.apps.153605106227-0objrp8h2iv8mk11b5l627t6gvp6n83j" />
             </intent-filter>
 

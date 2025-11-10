@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/core/utils/bankList.dart';
+import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+// QR view removed: using in-app webview instead
 
-class PaymentSheet extends StatefulWidget {
+class PaymentSheet extends ConsumerStatefulWidget {
   const PaymentSheet({super.key});
 
   @override
-  State<PaymentSheet> createState() => _PaymentSheetState();
+  ConsumerState<PaymentSheet> createState() => _PaymentSheetState();
 }
 
-class _PaymentSheetState extends State<PaymentSheet> {
+class _PaymentSheetState extends ConsumerState<PaymentSheet> {
   String _selectedMethod = "bank";
   final TextEditingController _amountController = TextEditingController();
   double _amount = 0;
@@ -18,6 +23,84 @@ class _PaymentSheetState extends State<PaymentSheet> {
   void dispose() {
     _amountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _TopupWallet(double amount, BuildContext context) async {
+    debugPrint("Nạp tiền vào ví: $amount");
+
+    // 1. Gọi API để tạo top-up
+    final walletRepository = ref.read(WalletRepositoryProvider);
+    final checkoutUrl = await walletRepository.topUpWallet(amount);
+    debugPrint("Checkout URL: $checkoutUrl");
+
+    // 2. Kiểm tra app ngân hàng / ví cài trên máy
+    final installedAppScheme = await findInstalledBankApp();
+
+    if (installedAppScheme != null) {
+      // 3a. Nếu có app -> mở deeplink
+      final uri = Uri.parse(checkoutUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // fallback nếu checkoutUrl không mở được
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không thể mở app ngân hàng.')),
+        );
+      }
+    } else {
+      // 3b. Nếu không có app -> mở in-app web view (fallback to browser if unavailable)
+      try {
+        final uri = Uri.parse(checkoutUrl);
+        final launched = await launchUrl(uri, mode: LaunchMode.inAppWebView);
+        if (!launched) {
+          // fallback: try external application (browser)
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            // As a last resort, show the link so the user can copy it
+            await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Mở thanh toán'),
+                content: SelectableText(checkoutUrl),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Đóng'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: checkoutUrl));
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Đã sao chép liên kết vào clipboard')),
+                      );
+                    },
+                    child: const Text('Sao chép liên kết'),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        // ignore: avoid_print
+        print('Failed to open in-app webview: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không thể mở trang thanh toán.')),
+        );
+      }
+    }
+
+    // Best-effort: refresh the wallet model so UI can reflect any immediate
+    // balance changes (some payment flows may update balance asynchronously).
+    try {
+      ref.refresh(walletModelProvider);
+      await ref.read(walletModelProvider.future);
+      debugPrint('Wallet model refreshed after top-up attempt');
+    } catch (e) {
+      debugPrint('Failed to refresh wallet after top-up: $e');
+    }
   }
 
   @override
@@ -85,7 +168,9 @@ class _PaymentSheetState extends State<PaymentSheet> {
                               onChanged: (value) {
                                 setState(() {
                                   _amount =
-                                      double.tryParse(value) != null ? double.parse(value) : 0;
+                                      double.tryParse(value) != null
+                                          ? double.parse(value)
+                                          : 0;
                                 });
                               },
                             ),
@@ -150,30 +235,6 @@ class _PaymentSheetState extends State<PaymentSheet> {
                       ),
                       const SizedBox(height: 12),
 
-                      _buildPaymentOption(
-                        context,
-                        id: "bank",
-                        icon: Icons.credit_card,
-                        title: "Thẻ ngân hàng",
-                        subtitle: "Visa / Mastercard",
-                      ),
-                      const SizedBox(height: 12),
-                      _buildPaymentOption(
-                        context,
-                        id: "momo",
-                        icon: Icons.phone_android,
-                        title: "MoMo",
-                        subtitle: "Ví điện tử MoMo",
-                      ),
-                      const SizedBox(height: 12),
-                      _buildPaymentOption(
-                        context,
-                        id: "zalopay",
-                        icon: Icons.qr_code,
-                        title: "ZaloPay",
-                        subtitle: "Ví điện tử ZaloPay",
-                      ),
-
                       const SizedBox(height: 24),
                       Center(
                         child: RichText(
@@ -194,10 +255,13 @@ class _PaymentSheetState extends State<PaymentSheet> {
                                   fontWeight: FontWeight.w600,
                                   decoration: TextDecoration.underline,
                                 ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    debugPrint("Điều khoản dịch vụ clicked!");
-                                  },
+                                recognizer:
+                                    TapGestureRecognizer()
+                                      ..onTap = () {
+                                        debugPrint(
+                                          "Điều khoản dịch vụ clicked!",
+                                        );
+                                      },
                               ),
                               const TextSpan(text: " của chúng tôi"),
                             ],
@@ -265,13 +329,15 @@ class _PaymentSheetState extends State<PaymentSheet> {
                     child: SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _amount >= 100000 && _amount <= 10000000
-                            ? () {
-                                Navigator.pop(context);
-                                debugPrint(
-                                    "Phương thức chọn: $_selectedMethod, số tiền: $_amount");
-                              }
-                            : null,
+                        onPressed:
+                            _amount >= 1000 && _amount <= 10000000
+                                ? () {
+                                  _TopupWallet(_amount, context);
+                                  debugPrint(
+                                    "Phương thức chọn: $_selectedMethod, số tiền: $_amount",
+                                  );
+                                }
+                                : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF007AFF),
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -303,79 +369,11 @@ class _PaymentSheetState extends State<PaymentSheet> {
   static String _formatCurrency(double value) {
     if (value == 0) return "0đ";
     final str = value.toStringAsFixed(0);
-    final formatted =
-        str.replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => "${m[1]}.");
-    return "$formattedđ";
-  }
-
-  // --- Widget phương thức thanh toán ---
-  Widget _buildPaymentOption(
-    BuildContext context, {
-    required String id,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    final bool selected = _selectedMethod == id;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedMethod = id;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: selected ? const Color(0xFF007AFF) : const Color(0xFFE5E5E5),
-            width: selected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          color: Colors.white,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: selected ? const Color(0xFF007AFF) : Colors.grey,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Radio<String>(
-              value: id,
-              groupValue: _selectedMethod,
-              onChanged: (v) {
-                setState(() {
-                  _selectedMethod = v!;
-                });
-              },
-              activeColor: const Color(0xFF007AFF),
-            ),
-          ],
-        ),
-      ),
+    final formatted = str.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (m) => "${m[1]}.",
     );
+    return "$formattedđ";
   }
 }
 

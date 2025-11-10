@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:group_trip/features/auth/presentation/screens/register_screen.dart';
 import 'package:group_trip/features/blog/presentation/blog_screen.dart';
+import 'package:group_trip/features/chat/presentation/chat_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_screen.dart';
 import 'package:group_trip/features/trip/presentation/cancel_process_screen.dart';
 import 'package:group_trip/features/trip/presentation/confirm_process_screen.dart';
@@ -25,7 +26,7 @@ class _MainLayoutState extends State<MainLayout> {
   final _pages = [
     const TripScreen(),
     const CancelProcessScreen(),
-    const DepositProcessScreen(),
+    const ChatScreen(),
     const BlogScreen(),
     const ProfileScreen(),
   ];

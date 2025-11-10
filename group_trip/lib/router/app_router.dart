@@ -6,6 +6,7 @@ import 'package:group_trip/features/auth/presentation/screens/login_screen.dart'
 import 'package:group_trip/features/auth/presentation/screens/register_screen.dart';
 import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:group_trip/features/blog/presentation/blog_screen.dart';
+import 'package:group_trip/features/chat/presentation/chat_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_detail_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_screen.dart';
 import 'package:group_trip/features/wallet/presentation/wallet_screen.dart';
@@ -51,13 +52,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
           ),
-          
+          GoRoute(
+            path: '/chat',
+            builder: (context, state) => const ChatScreen(),
+          ),
         ],
       ),
       GoRoute(
             path: '/profile/detail',
             builder: (context, state) => const ProfileDetailScreen(),
           ),
+
+      
        GoRoute(
             path: '/profile/wallet',
             builder: (context, state) => const MyWalletScreen(),

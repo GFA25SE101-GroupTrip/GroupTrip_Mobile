@@ -1,55 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/core/utils/dataFormat.dart';
+import 'package:group_trip/features/profile/providers/profile_provider.dart';
+// wallet_model not directly used in this file; transactions are provided via provider
 import 'package:group_trip/features/wallet/presentation/widget/payment_sheet.dart';
+import 'package:group_trip/features/wallet/presentation/widget/transaction_item.dart';
+import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
 
-class MyWalletScreen extends StatelessWidget {
+class MyWalletScreen extends ConsumerWidget {
   const MyWalletScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> transactions = [
-      {
-        'icon': Icons.wallet,
-        'title': 'Top-up via Momo',
-        'amount': '+₫500,000',
-        'color': Colors.green,
-        'time': 'Hôm nay, 08:30',
-        'status': 'Hoàn thành',
-        'statusColor': Colors.green,
-      },
-      {
-        'icon': Icons.flight_takeoff,
-        'title': 'Deposit for "Trip to Đà Lạt"',
-        'amount': '-₫200,000',
-        'color': Colors.red,
-        'time': 'Hôm qua, 14:20',
-        'status': 'Hoàn thành',
-        'statusColor': Colors.green,
-      },
-      {
-        'icon': Icons.refresh,
-        'title': 'Refund from canceled trip',
-        'amount': '+₫200,000',
-        'color': Colors.green,
-        'time': '2 ngày trước, 16:45',
-        'status': 'Hoàn thành',
-        'statusColor': Colors.green,
-      },
-      {
-        'icon': Icons.food_bank,
-        'title': 'Withdraw to bank',
-        'amount': '-₫500,000',
-        'color': Colors.red,
-        'time': '3 ngày trước, 09:15',
-        'status': 'Đang xử lý',
-        'statusColor': Colors.orange,
-      },
-    ];
+  Widget build(BuildContext context, WidgetRef ref) {
+  final walletAsync = ref.watch(walletModelProvider);
+  // ensure we subscribe to profileViewProvider so the wallet UI rebuilds when
+  // profile changes; transactionsProvider depends on it and will refetch.
+  ref.watch(profileViewProvider);
+  final transactionsAsync = ref.watch(transactionsProvider);
+    
+    
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Tải lại',
+            icon: const Icon(Icons.refresh, color: Colors.black),
+            onPressed: () async {
+              // show a small loading snackbar
+              final messenger = ScaffoldMessenger.of(context);
+              messenger.showSnackBar(const SnackBar(
+                content: Text('Đang tải lại giao dịch...'),
+                duration: Duration(seconds: 2),
+              ));
+              try {
+                // trigger refresh and await the provider's future to complete
+                final _ = ref.refresh(transactionsProvider);
+                await ref.read(transactionsProvider.future);
+                messenger.showSnackBar(const SnackBar(
+                  content: Text('Đã tải lại giao dịch'),
+                  duration: Duration(seconds: 2),
+                ));
+              } catch (e) {
+                messenger.showSnackBar(SnackBar(
+                  content: Text('Lỗi khi tải lại: $e'),
+                ));
+              }
+            },
+          ),
+        ],
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
@@ -91,17 +93,35 @@ class MyWalletScreen extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                   const SizedBox(height: 5),
-                  const Text(
-                    '₫1,200,000',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
+                  walletAsync.when(
+                    data: (model) => Text(
+                      model != null ? '${formatCurrency(model.balance)}' : '0₫',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    loading: () => const Text(
+                      '...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    error: (e, st) => const Text(
+                      '0₫',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Updated 10:30 AM, Oct 18',
+                  Text(
+                    formatDateToDMY(DateTime.now()),
                     style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   const SizedBox(height: 14),
@@ -148,75 +168,27 @@ class MyWalletScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            Column(
-              children: transactions.map((tx) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        height: 42,
-                        width: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(tx['icon'], color: tx['color']),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tx['title'],
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              tx['time'],
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            tx['amount'],
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                              color: tx['color'],
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            tx['status'],
-                            style: TextStyle(
-                              color: tx['statusColor'],
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+            // Transactions loaded from server
+            transactionsAsync.when(
+              data: (txs) {
+                if (txs.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: Text('Không có giao dịch nào')), 
+                  );
+                }
+                return Column(
+                  children: txs.map((tx) => TransactionItem(transaction: tx)).toList(),
                 );
-              }).toList(),
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, st) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: Text('Lỗi khi tải giao dịch')),
+              ),
             ),
           ],
         ),

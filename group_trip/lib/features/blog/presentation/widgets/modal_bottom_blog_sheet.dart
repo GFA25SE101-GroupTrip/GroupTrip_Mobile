@@ -190,18 +190,32 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
     final blogId = await blogNotifier.createBlog(data);
     // upload cover image if exists
     print(coverImage);
-      if (blogId != null) {
+    if (blogId != null) {
+      var uploadSucceeded = false;
+      if (coverImage != null) {
         try {
-          await ref.read(imageProvider.notifier).uploadImage(coverImage!, blogId);
-
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng bài thành công')));
+          await ref.read(imageProvider.notifier).uploadImage(coverImage, blogId);
+          uploadSucceeded = true;
         } catch (e) {
           // ignore: avoid_print
           print('Failed to upload cover image: $e');
         }
       }
-    // refresh the blog list provider (ignore the returned value)
-    var _ = ref.refresh(blogListProvider);
+
+      // refresh the blog list provider (ignore the returned value)
+      var _ = ref.refresh(blogListProvider);
+
+      // Show success or partial-success message
+      if (uploadSucceeded || coverImage == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng bài thành công')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bài viết đã được tạo, nhưng upload ảnh thất bại')));
+      }
+
+      // Close the bottom sheet now that the blog has been created
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
 
   }
 

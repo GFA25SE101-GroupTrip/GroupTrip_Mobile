@@ -1,9 +1,11 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:group_trip/features/auth/data/user_model.dart';
 import 'package:group_trip/features/auth/presentation/widgets/input_widget.dart';
+import 'package:group_trip/features/auth/presentation/widgets/term_of_service_bottom_sheet.dart';
 import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:dio/dio.dart';
 
@@ -317,6 +319,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             TextSpan(
                               text: "term of service",
                               style: const TextStyle(color: Colors.red),
+                              recognizer:
+                                  TapGestureRecognizer()
+                                    ..onTap = () {
+                                      // 👉 Xử lý khi người dùng nhấn vào đây
+                                      showTravellerTermsSheet(context);
+                                    },
                             ),
                           ],
                         ),
