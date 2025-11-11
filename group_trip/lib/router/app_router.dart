@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:group_trip/features/account/representative/presentation/representative_detail_screen.dart';
+import 'package:group_trip/features/account/representative/presentation/representative_screen.dart';
+import 'package:group_trip/features/account/traveller/presentation/traveller_profile_screen.dart';
 import 'package:group_trip/features/auth/data/user_model.dart';
 import 'package:group_trip/features/auth/presentation/screens/login_screen.dart';
 import 'package:group_trip/features/auth/presentation/screens/register_screen.dart';
@@ -56,14 +59,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: '/chat',
             builder: (context, state) => const ChatScreen(),
           ),
+         
         ],
       ),
+      GoRoute(path: '/representative/detail',
+          builder: (context, state) => const RepresentativeDetail(),
+        ),
+      GoRoute(path: '/traveller',
+          builder: (context, state) => const TravellerProfileScreen(),
+        ),
+      GoRoute(
+            path: '/representative',
+            builder: (context, state) => const TourListPage(),
+          ),
       GoRoute(
             path: '/profile/detail',
             builder: (context, state) => const ProfileDetailScreen(),
           ),
-
-      
        GoRoute(
             path: '/profile/wallet',
             builder: (context, state) => const MyWalletScreen(),

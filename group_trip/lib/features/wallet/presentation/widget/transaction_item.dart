@@ -13,18 +13,23 @@ class TransactionItem extends StatelessWidget {
     final isDeposit = transaction.type == 1;
     final isExpense = transaction.type == 2;
     final isRefund = transaction.type == 3;
-
+    final isTopup = transaction.type == 4;
     final icon = isDeposit
         ? Icons.arrow_downward_rounded
         : isExpense
             ? Icons.arrow_upward_rounded
-            : Icons.refresh_rounded;
+            : isTopup
+                ? Icons.account_balance_wallet_rounded
+                : Icons.refresh_rounded;
+    
 
     final color = isDeposit
         ? Colors.green
         : isExpense
             ? Colors.red
-            : Colors.orange;
+            : isTopup
+                ? Colors.blue
+                : Colors.orange;
 
     final amountPrefix = isDeposit
         ? '+'

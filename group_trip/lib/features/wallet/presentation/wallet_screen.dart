@@ -37,11 +37,16 @@ class MyWalletScreen extends ConsumerWidget {
                 duration: Duration(seconds: 2),
               ));
               try {
-                // trigger refresh and await the provider's future to complete
+                // Refresh wallet balance first
+                final _ = ref.refresh(walletModelProvider);
+                await ref.read(walletModelProvider.future);
+
+                // Then refresh transactions list
                 final _ = ref.refresh(transactionsProvider);
                 await ref.read(transactionsProvider.future);
+
                 messenger.showSnackBar(const SnackBar(
-                  content: Text('Đã tải lại giao dịch'),
+                  content: Text('Đã tải lại số dư và giao dịch'),
                   duration: Duration(seconds: 2),
                 ));
               } catch (e) {

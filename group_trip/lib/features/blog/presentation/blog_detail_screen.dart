@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/blog/data/blog_model.dart';
 // import 'package:group_trip/shared/widgets/atoms/chip_tag.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
@@ -61,18 +62,23 @@ class BlogDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
 
-            Row(
-              children: [
-               CircleAvatar(
-                  radius: 16,
-                  backgroundImage: NetworkImage(blog.userImage),
-                ),
-                const SizedBox(width: 8),
-                Text(blog.fullName,
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                const Spacer(),
-               
-              ],
+            GestureDetector(
+              onTap: () {
+                context.push('/traveller'); // Navigate to traveller profile
+              },
+              child: Row(
+                children: [
+                 CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(blog.userImage),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(blog.fullName,
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  const Spacer(),
+                 
+                ],
+              ),
             ),
             const SizedBox(height: 12),
 

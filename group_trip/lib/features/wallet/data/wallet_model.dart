@@ -74,3 +74,16 @@ class TransactionModel {
     );
   }
 }
+
+
+class TopUpResponse {
+  final String checkoutUrl;
+  final String qrCode; 
+  TopUpResponse({required this.checkoutUrl, required this.qrCode});
+  factory TopUpResponse.fromJson(Map<String, dynamic> json) {
+    return TopUpResponse(
+      checkoutUrl: json['checkoutUrl'] as String,
+      qrCode: json['qrCode'] as String,
+    );
+  }
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class TravelAgency {
   final String name;
@@ -50,7 +51,7 @@ class TravelAgencySection extends StatelessWidget {
               ),
               GestureDetector(
                 onTap: () {
-                  // TODO: chuyển sang trang danh sách đầy đủ nếu cần
+                  context.push('/representative');
                 },
                 child: const Text(
                   'Xem thêm',

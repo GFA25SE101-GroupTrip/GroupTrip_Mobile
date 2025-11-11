@@ -24,7 +24,7 @@ class WalletRepository {
   }
   double? get balance => _cache?.balance;
 
-  Future<String> topUpWallet(double amount) async {
+  Future<TopUpResponse> topUpWallet(double amount) async {
     try {
       // ignore: avoid_print
       print('🔁 [WalletRepository] topUpWallet($amount)');

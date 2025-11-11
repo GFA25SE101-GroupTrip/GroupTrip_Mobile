@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/core/utils/bankList.dart';
 import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 // QR view removed: using in-app webview instead
 
 class PaymentSheet extends ConsumerStatefulWidget {
@@ -25,83 +26,116 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
     super.dispose();
   }
 
-  Future<void> _TopupWallet(double amount, BuildContext context) async {
-    debugPrint("Nạp tiền vào ví: $amount");
+  /// Hàm top-up (giả sử checkoutUrl.qrCode là payload QR string, không phải deeplink).
+Future<void> _TopupWallet(double amount, BuildContext context) async {
+  debugPrint("Nạp tiền vào ví: $amount");
 
-    // 1. Gọi API để tạo top-up
-    final walletRepository = ref.read(WalletRepositoryProvider);
-    final checkoutUrl = await walletRepository.topUpWallet(amount);
-    debugPrint("Checkout URL: $checkoutUrl");
+  // 1) Gọi API để tạo top-up
+  final walletRepository = ref.read(WalletRepositoryProvider);
+  final checkoutUrl = await walletRepository.topUpWallet(amount);
+  debugPrint("Checkout URL object: $checkoutUrl");
 
-    // 2. Kiểm tra app ngân hàng / ví cài trên máy
-    final installedAppScheme = await findInstalledBankApp();
+  // backend trả về chỉ payload QR (ví dụ "00020101...DDF9")
+  final qrPayload = checkoutUrl.qrCode; // <-- string payload từ backend
+  final webCheckoutUrl = checkoutUrl.checkoutUrl; // url web fallback
 
-    if (installedAppScheme != null) {
-      // 3a. Nếu có app -> mở deeplink
-      final uri = Uri.parse(checkoutUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        // fallback nếu checkoutUrl không mở được
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể mở app ngân hàng.')),
-        );
-      }
-    } else {
-      // 3b. Nếu không có app -> mở in-app web view (fallback to browser if unavailable)
-      try {
-        final uri = Uri.parse(checkoutUrl);
-        final launched = await launchUrl(uri, mode: LaunchMode.inAppWebView);
-        if (!launched) {
-          // fallback: try external application (browser)
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          } else {
-            // As a last resort, show the link so the user can copy it
-            await showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Mở thanh toán'),
-                content: SelectableText(checkoutUrl),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Đóng'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: checkoutUrl));
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã sao chép liên kết vào clipboard')),
-                      );
-                    },
-                    child: const Text('Sao chép liên kết'),
-                  ),
-                ],
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        // ignore: avoid_print
-        print('Failed to open in-app webview: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể mở trang thanh toán.')),
-        );
-      }
-    }
+  // 2) Kiểm tra app ngân hàng / ví cài trên máy
+  // final installed = await findInstalledBankApp();
 
-    // Best-effort: refresh the wallet model so UI can reflect any immediate
-    // balance changes (some payment flows may update balance asynchronously).
-    try {
-      ref.refresh(walletModelProvider);
-      await ref.read(walletModelProvider.future);
-      debugPrint('Wallet model refreshed after top-up attempt');
-    } catch (e) {
-      debugPrint('Failed to refresh wallet after top-up: $e');
-    }
-  }
+  // if (installed != null) {
+  //   final appName = installed.key;
+  //   final scheme = installed.value; // e.g. 'mbbank://qr?data='
+  //   final deeplinkString = '$scheme$qrPayload';
+  //   final deeplinkUri = Uri.parse(deeplinkString);
+
+  //   debugPrint('Detected installed app: $appName. Trying deeplink: $deeplinkString');
+
+  //   // 3a) Thử mở deeplink vào app ngân hàng
+  //   if (await canLaunchUrl(deeplinkUri)) {
+  //     final launched = await launchUrl(deeplinkUri, mode: LaunchMode.externalApplication);
+  //     debugPrint('launchUrl result for $appName: $launched');
+  //     if (!launched) {
+  //       // Nếu không mở được, fallback sang WebView
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Không thể mở app ngân hàng, chuyển sang thanh toán web...')),
+  //       );
+  //       await _openCheckoutWebview(context, webCheckoutUrl);
+  //     }
+  //     // Nếu mở deeplink thành công — app ngân hàng sẽ xử lý thanh toán. Tạm đóng hàm.
+  //     return;
+  //   } else {
+  //     // Nếu canLaunchUrl false (tức backend deeplink/ scheme không hợp lệ)
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Không thể mở liên kết deeplink trên thiết bị. Chuyển sang thanh toán web...')),
+  //     );
+  //     await _openCheckoutWebview(context, webCheckoutUrl);
+  //     return;
+  //   }
+  // } else {
+    // 3b) Nếu không có app nào cài -> mở in-app WebView (fallback)
+    debugPrint('No bank/wallet app detected. Opening web checkout.');
+    await _openCheckoutWebview(context, webCheckoutUrl);
+    return;
+  // }
+}
+
+/// Mở checkout trong WebView (toàn màn hình)
+Future<void> _openCheckoutWebview(BuildContext context, String checkoutUrl) async {
+  final uri = Uri.parse(checkoutUrl);
+
+  await Navigator.of(context).push(MaterialPageRoute(
+    fullscreenDialog: true,
+    builder: (_) => Scaffold(
+      appBar: AppBar(
+        title: const Text('Thanh toán'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: WebViewWidget(
+        controller: WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..setNavigationDelegate(NavigationDelegate(
+            onNavigationRequest: (req) {
+              final url = req.url;
+              debugPrint('WebView navigation: $url');
+
+              // xử lý callback custom scheme nếu backend redirect về myapp://...
+              if (url.startsWith('myapp://payment-success')) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Thanh toán thành công')),
+                );
+                // Best-effort refresh wallet (fire-and-forget async closure)
+                try {
+                  () async {
+                    final _ = ref.refresh(walletModelProvider);
+                    await ref.read(walletModelProvider.future);
+                  }();
+                } catch (e) {
+                  debugPrint('Failed to refresh wallet after success callback: $e');
+                }
+                return NavigationDecision.prevent;
+              }
+              if (url.startsWith('myapp://payment-cancel')) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Giao dịch đã bị hủy')),
+                );
+                return NavigationDecision.prevent;
+              }
+              return NavigationDecision.navigate;
+            },
+            onPageStarted: (s) => debugPrint('WebView page started: $s'),
+            onPageFinished: (s) => debugPrint('WebView page finished: $s'),
+            onWebResourceError: (err) => debugPrint('WebView error: $err'),
+          ))
+          ..loadRequest(uri),
+      ),
+    ),
+  ));
+}
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +145,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
       minChildSize: 0.7,
       expand: false,
       builder: (context, scrollController) {
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
         return Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -122,7 +157,8 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
           child: Stack(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 72, 16, 90),
+                // add bottom padding equal to keyboard inset so the content scrolls above the keyboard
+                padding: EdgeInsets.fromLTRB(16, 72, 16, 90 + bottomInset),
                 child: SingleChildScrollView(
                   controller: scrollController,
                   child: Column(
@@ -310,7 +346,8 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
 
               // --- Button Thanh toán ---
               Positioned(
-                bottom: 0,
+                // move the bottom action up by the keyboard inset so it stays visible
+                bottom: bottomInset,
                 left: 0,
                 right: 0,
                 child: SafeArea(

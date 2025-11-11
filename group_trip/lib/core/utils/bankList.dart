@@ -1,20 +1,29 @@
+import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 final Map<String, String> bankSchemes = {
-  'VCB Digibank': 'vcb://',
-  'MB Bank': 'mbbank://',
-  'Techcombank': 'tcbbank://',
-  'BIDV': 'bidv://',
-  'Momo': 'momo://',
-  'ZaloPay': 'zalopay://',
+  // Ngân hàng
+  'VCB Digibank': 'vcbdigibank://qr?data=',
+  'MB Bank': 'mbbank://qr?data=',
+  'Techcombank': 'techcombank://qr?data=',
+  'BIDV SmartBanking': 'bidvsmartbanking://qr?data=',
+
+  // Ví điện tử
+  'Momo': 'momo://app?action=payWithApp&data=',
+  'ZaloPay': 'zalopay://app?data=',
+  'ShopeePay': 'airpay://qr?data=',
+  'VNPay': 'vnpay://app?data=',
+  'Viettel Money': 'viettelmoney://qr?data=',
 };
 
-
-
-Future<String?> findInstalledBankApp() async {
-  for (final scheme in bankSchemes.values) {
-    final uri = Uri.parse(scheme);
-    if (await canLaunchUrl(uri)) return scheme; // trả về scheme đầu tiên tìm thấy
+/// Trả về MapEntry(appName, scheme) nếu tìm thấy app có thể xử lý scheme.
+/// Thử với một payload dummy ngắn để canLaunchUrl có URI hợp lệ.
+Future<MapEntry<String, String>?> findInstalledBankApp() async {
+  for (final entry in bankSchemes.entries) {
+    final testUriString = '${entry.value}test'; // thử ghép payload giả
+    final uri = Uri.parse(testUriString);
+    final can = await canLaunchUrl(uri);
+    debugPrint('Testing ${entry.key} -> $can (uri=$testUriString)');
+    if (can) return entry; // trả về entry đầu tiên có thể mở
   }
   return null;
 }

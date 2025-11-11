@@ -11,7 +11,7 @@ class WalletRemoteDataSource {
     return WalletModel.fromJson(data);
   }
 
-  Future<String> topUpWallet(double amount) async {
+  Future<TopUpResponse> topUpWallet(double amount) async {
     final response = await api.postWithParams(
       'payment',
       '/api/payment/createlinkpayment',
@@ -20,8 +20,7 @@ class WalletRemoteDataSource {
 
     if (response.statusCode == 200 && response.data != null) {
       print('⬅️ [WalletAPI] Top-up response data=${response.data}');
-      return response.data['data']['checkoutUrl'] as String;
-      ;
+      return TopUpResponse.fromJson(response.data['data']);
     } else {
       throw Exception(
         'Top-up failed: ${response.statusCode} - ${response.data}',
