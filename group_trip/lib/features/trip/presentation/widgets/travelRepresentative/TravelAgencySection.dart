@@ -75,8 +75,10 @@ class TravelAgencySection extends ConsumerWidget {
             ),
             error: (_, __) => Center(child: Text('Lỗi khi tải danh sách')), 
             data: (reps) {
-              if (reps.isEmpty) return const Center(child: Text('Chưa có đơn vị tổ chức'));
-              final show = reps.take(5).toList();
+              // only show representatives with status == 'accepted'
+              final accepted = reps.where((r) => (r.status ?? '').toLowerCase() == 'accepted').toList();
+              if (accepted.isEmpty) return const Center(child: Text('Chưa có đơn vị tổ chức'));
+              final show = accepted.take(5).toList();
               return ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),

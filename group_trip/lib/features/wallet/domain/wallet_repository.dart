@@ -54,5 +54,20 @@ class WalletRepository {
       rethrow;
     }
   }
+  Future<List<TransactionModel>> fetchAllTransactions(String userID, String StartTime, String EndTime) async {
+    
+    try {
+      // ignore: avoid_print
+      print('🔁 [WalletRepository] fetchAllTransactions($userID, $StartTime, $EndTime)');
+      final res = await remoteDataSource.fetchAllTransactions(userID, StartTime, EndTime);
+      // ignore: avoid_print
+      print('✅ [WalletRepository] fetchAllTransactions completed');
+      return res;
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ [WalletRepository] fetchAllTransactions failed: $e');
+      rethrow;
+    }
+  }
 
 }

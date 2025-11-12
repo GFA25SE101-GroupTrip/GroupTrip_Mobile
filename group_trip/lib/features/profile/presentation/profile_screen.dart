@@ -196,13 +196,17 @@ class ProfileScreen extends ConsumerWidget {
               icon: Icons.star_border,
               title: "My Reviews",
               subtitle: "Xem các đánh giá của bạn",
-              onTap: () {},
+              onTap: () {
+                context.push('/profile/wallet');
+              },
             ),
             _buildMenuItem(
               icon: Icons.help_outline,
               title: "Help Center",
               subtitle: "FAQ & hỗ trợ khách hàng",
-              onTap: () {},
+              onTap: () {
+                context.push('/profile/help');
+              },
             ),
 
             _buildMenuItem(

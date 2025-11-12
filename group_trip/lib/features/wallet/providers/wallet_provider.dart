@@ -54,6 +54,31 @@ final transactionsProvider =
     return <TransactionModel>[];
   }
 });
+
+// Parameter holder for fetching transactions within a date range
+class TransactionRangeParams {
+  final String userID;
+  final String startTime; // expected ISO8601 or backend-accepted format
+  final String endTime;
+
+  const TransactionRangeParams({required this.userID, required this.startTime, required this.endTime});
+}
+
+/// Fetch transactions for a user within [startTime, endTime].
+/// Usage: ref.watch(transactionsByRangeProvider(TransactionRangeParams(...)))
+final transactionsByRangeProvider =
+    FutureProvider.family<List<TransactionModel>, TransactionRangeParams>((ref, params) async {
+  final repo = ref.read(WalletRepositoryProvider);
+  if (params.userID.isEmpty) return <TransactionModel>[];
+  try {
+    final txs = await repo.fetchAllTransactions(params.userID, params.startTime, params.endTime);
+    return txs;
+  } catch (e) {
+    // ignore: avoid_print
+    print('⚠️ transactionsByRangeProvider fetch failed: $e');
+    return <TransactionModel>[];
+  }
+});
 class WalletNotifier extends StateNotifier<AsyncValue<void>> {
   final WalletRepository repository;
 
@@ -83,6 +108,16 @@ class WalletNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncLoading();
     try {
       await repository.fetchTransactions(userID);
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
+  Future<void> loadAllTransactions(String userID, String StartTime, String EndTime) async {
+    state = const AsyncLoading();
+    try {
+      await repository.fetchAllTransactions(userID, StartTime, EndTime);
       state = const AsyncData(null);
     } catch (e, st) {
       state = AsyncError(e, st);

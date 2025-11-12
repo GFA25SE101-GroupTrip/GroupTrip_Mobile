@@ -22,16 +22,18 @@ class TourListPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, st) => Center(child: Text('Lỗi: $err')),
         data: (reps) {
-          if (reps.isEmpty) {
-            return const Center(child: Text('Không có đơn vị tổ chức'));
+          // Only show representatives with status == 'Accepted'
+          final accepted = reps.where((r) => (r.status ?? '').toLowerCase() == 'accepted').toList();
+          if (accepted.isEmpty) {
+            return const Center(child: Text('Không có đơn vị tổ chức được chấp nhận'));
           }
 
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: reps.length,
+            itemCount: accepted.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final RepModel rep = reps[index];
+              final RepModel rep = accepted[index];
 
               // Provide safe fallbacks for nullable fields
               final displayName =
@@ -47,51 +49,7 @@ class TourListPage extends ConsumerWidget {
               final totalCustomers = rep.totalCustomers ?? 0;
               final rating = rep.rating ?? 0.0;
 
-              Widget leadingAvatar;
-              if (rep.socialMedia != null && rep.socialMedia!.isNotEmpty) {
-                // socialMedia is an image URL
-                leadingAvatar = ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    rep.socialMedia!,
-                    width: 64,
-                    height: 64,
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (_, __, ___) => Container(
-                          width: 64,
-                          height: 64,
-                          color: Colors.grey[200],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey,
-                          ),
-                        ),
-                  ),
-                );
-              } else {
-                // fallback avatar (initials)
-                final initials =
-                    displayName
-                        .split(' ')
-                        .where((s) => s.isNotEmpty)
-                        .map((s) => s[0])
-                        .take(2)
-                        .join()
-                        .toUpperCase();
-                leadingAvatar = CircleAvatar(
-                  radius: 32,
-                  backgroundColor: Colors.blue.shade50,
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                );
-              }
+              // leading avatar handled by the left image section (full-bleed)
 
               return InkWell(
                 onTap: () {
@@ -281,12 +239,5 @@ class TourListPage extends ConsumerWidget {
     );
   }
 
-  Widget _InfoChip({required IconData icon, required String label}) {
-    return Chip(
-      avatar: Icon(icon, size: 16, color: Colors.grey[700]),
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      backgroundColor: Colors.grey[100],
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-    );
-  }
+  // _InfoChip removed — not used in current layout
 }

@@ -12,6 +12,9 @@ import 'package:group_trip/features/blog/presentation/blog_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_detail_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_screen.dart';
+import 'package:group_trip/features/report/presentation/complaint_detail_screen.dart';
+import 'package:group_trip/features/report/presentation/help_center_screen.dart';
+import 'package:group_trip/features/report/presentation/submit_ticket_form.dart';
 import 'package:group_trip/features/wallet/presentation/wallet_screen.dart';
 import 'package:group_trip/shared/main_layout.dart';
 
@@ -82,10 +85,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: '/profile/detail',
             builder: (context, state) => const ProfileDetailScreen(),
           ),
-       GoRoute(
+      GoRoute(
             path: '/profile/wallet',
             builder: (context, state) => const MyWalletScreen(),
           ),
+
+      GoRoute(
+            path: '/profile/help',
+            builder: (context, state) => const HelpCenterScreen(),
+      ),
+         GoRoute(
+            path: '/profile/help/detail',
+            builder: (context, state) => const ComplaintDetailScreen(),
+      ),
+      GoRoute(
+        path: '/profile/help/submit',
+        builder: (context, state) => const SubmitTicketScreen(),
+      ),
       GoRoute(
         path: '/',
         builder: (context, state) => const LoginScreen(),

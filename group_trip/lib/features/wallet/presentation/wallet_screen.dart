@@ -17,6 +17,8 @@ class MyWalletScreen extends ConsumerStatefulWidget {
 class _MyWalletScreenState extends ConsumerState<MyWalletScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
+  // params used to fetch transactions from server when user applies a date range
+  TransactionRangeParams? _appliedRangeParams;
 
   Future<void> _pickStartDate(BuildContext context) async {
     final now = DateTime.now();
@@ -48,19 +50,45 @@ class _MyWalletScreenState extends ConsumerState<MyWalletScreen> {
   }
 
   Future<void> _loadTransactionByDate() async {
+    if (_startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn cả ngày bắt đầu và kết thúc')));
+      return;
+    }
+
     final startTime = combineDate(_startDate!).toIso8601String();
     final endTime = combineDate(_endDate!).toIso8601String();
 
-    print('Loading transactions from $startTime to $endTime');
+    final params = TransactionRangeParams(userID: ref.read(profileViewProvider)?.userID ?? '', startTime: startTime, endTime: endTime);
+    if (params.userID.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không có user id')));
+      return;
+    }
+
+    setState(() {
+      _appliedRangeParams = params;
+    });
+
+    // trigger a refresh and await the provider future so UI shows latest data
+    try {
+  // invalidate the family provider instance so it re-evaluates, then await its future
+  ref.invalidate(transactionsByRangeProvider(params));
+  await ref.read(transactionsByRangeProvider(params).future);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã tải giao dịch theo khoảng thời gian')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi khi tải giao dịch: $e')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final walletAsync = ref.watch(walletModelProvider);
-    // ensure we subscribe to profileViewProvider so the wallet UI rebuilds when
-    // profile changes; transactionsProvider depends on it and will refetch.
-    ref.watch(profileViewProvider);
-    final transactionsAsync = ref.watch(transactionsProvider);
+  // ensure we subscribe to profileViewProvider so the wallet UI rebuilds when
+  // profile changes; choose which transactions provider to watch depending
+  // on whether the user applied a date range.
+  ref.watch(profileViewProvider);
+  final transactionsAsync = _appliedRangeParams != null
+    ? ref.watch(transactionsByRangeProvider(_appliedRangeParams!))
+    : ref.watch(transactionsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -320,56 +348,27 @@ class _MyWalletScreenState extends ConsumerState<MyWalletScreen> {
               ),
             ),
 
-            // Transactions loaded from server
+            // Transactions loaded from server (either full list or filtered by range)
             transactionsAsync.when(
               data: (txs) {
-                // Apply date filtering client-side if start/end specified
-                var filtered = txs;
-                if (_startDate != null) {
-                  filtered =
-                      filtered
-                          .where((t) => !t.createdTime.isBefore(_startDate!))
-                          .toList();
-                }
-                if (_endDate != null) {
-                  // include entire end day
-                  final dayEnd = DateTime(
-                    _endDate!.year,
-                    _endDate!.month,
-                    _endDate!.day,
-                    23,
-                    59,
-                    59,
-                  );
-                  filtered =
-                      filtered
-                          .where((t) => !t.createdTime.isAfter(dayEnd))
-                          .toList();
-                }
-
-                if (filtered.isEmpty) {
+                if (txs.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(child: Text('Không có giao dịch nào')),
                   );
                 }
                 return Column(
-                  children:
-                      filtered
-                          .map((tx) => TransactionItem(transaction: tx))
-                          .toList(),
+                  children: txs.map((tx) => TransactionItem(transaction: tx)).toList(),
                 );
               },
-              loading:
-                  () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-              error:
-                  (e, st) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: Text('Lỗi khi tải giao dịch')),
-                  ),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, st) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: Text('Lỗi khi tải giao dịch: $e')),
+              ),
             ),
           ],
         ),

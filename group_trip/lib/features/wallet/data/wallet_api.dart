@@ -40,5 +40,25 @@ class WalletRemoteDataSource {
   return transactionsJson
       .map((t) => TransactionModel.fromJson(t))
       .toList();
-}
+  }
+
+  Future<List<TransactionModel>> fetchAllTransactions(String userID, String StartTime, String EndTime) async {
+    final response = await api.get(
+      'payment',
+      '/api/payment/gettransactionbytime',
+      queryParameters: {
+        'UserID': userID,
+        'StartTime': StartTime,
+        'EndTime': EndTime,
+      },
+    );
+
+    print('⬅️ [WalletAPI] fetchAllTransactions data=${response.data}');
+
+    final transactionsJson = response.data['data'] as List;
+    return transactionsJson
+        .map((t) => TransactionModel.fromJson(t))
+        .toList();
+  }
+
 }
