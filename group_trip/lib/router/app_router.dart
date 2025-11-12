@@ -62,9 +62,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
          
         ],
       ),
-      GoRoute(path: '/representative/detail',
-          builder: (context, state) => const RepresentativeDetail(),
-        ),
+      GoRoute(
+        path: '/representative/detail',
+        builder: (context, state) {
+          final extra = state.extra;
+          String? id;
+          if (extra is Map && extra['id'] != null) id = extra['id'] as String;
+          return RepresentativeDetail(id: id);
+        },
+      ),
       GoRoute(path: '/traveller',
           builder: (context, state) => const TravellerProfileScreen(),
         ),

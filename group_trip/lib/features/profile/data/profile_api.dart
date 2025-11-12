@@ -102,8 +102,8 @@ class ProfileRemoteDataSource {
     );
     try {
       // Ensure the path contains a separating slash before the userId
-      final path = '/api/auth/getuserid$userId';
-      final response = await api.get('auth', path);
+      final path = '/api/auth/getuserid/${userId}';
+      final response = await api.get('auth', '/api/auth/getuserid/${userId}');
       print(
         '⬅️ [ProfileAPI] GET /api/auth/userinformation status=${response.statusCode} data=${response.data}',
       );

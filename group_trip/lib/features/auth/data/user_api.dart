@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/core/api/api_client.dart';
 import 'package:group_trip/core/config/secure_storage_service.dart';
 import 'package:group_trip/features/auth/data/user_model.dart';

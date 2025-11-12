@@ -14,3 +14,16 @@ String formatCurrency(double value) {
     );
     return "$formattedđ";
 }
+
+DateTime combineDate(DateTime date) {
+  final now = DateTime.now();
+  return DateTime(
+    date.year,
+    date.month,
+    date.day,
+    now.hour,
+    now.minute,
+    now.second,
+    now.millisecond,
+  ).toUtc();
+}

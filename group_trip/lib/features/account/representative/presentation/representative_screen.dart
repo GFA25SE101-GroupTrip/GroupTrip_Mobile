@@ -4,8 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/account/representative/providers/rep_provider.dart';
 import 'package:group_trip/features/account/representative/data/rep_model.dart';
 
-
-
 class TourListPage extends ConsumerWidget {
   const TourListPage({super.key});
 
@@ -27,38 +25,232 @@ class TourListPage extends ConsumerWidget {
           if (reps.isEmpty) {
             return const Center(child: Text('Không có đơn vị tổ chức'));
           }
-          return ListView.builder(
+
+          return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: reps.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final RepModel rep = reps[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: GestureDetector(
-                  onTap: () {
-                    // Navigate to detail screen
-                    context.push('/representative/detail');
-                  },
-                  child: Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 1,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            rep?.contactName ?? 'No contact name',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+
+              // Provide safe fallbacks for nullable fields
+              final displayName =
+                  (rep.contactName == null || rep.contactName!.trim().isEmpty)
+                      ? 'Chưa cập nhật tên liên hệ'
+                      : rep.contactName!;
+              final description =
+                  (rep.description == null || rep.description!.trim().isEmpty)
+                      ? 'Chưa có mô tả'
+                      : rep.description!;
+              // we no longer display hotline/address/website separately
+              final totalTours = rep.totalTours ?? 0;
+              final totalCustomers = rep.totalCustomers ?? 0;
+              final rating = rep.rating ?? 0.0;
+
+              Widget leadingAvatar;
+              if (rep.socialMedia != null && rep.socialMedia!.isNotEmpty) {
+                // socialMedia is an image URL
+                leadingAvatar = ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    rep.socialMedia!,
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    errorBuilder:
+                        (_, __, ___) => Container(
+                          width: 64,
+                          height: 64,
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey,
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            rep?.description ?? 'No description',
-                            style: const TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                        ),
+                  ),
+                );
+              } else {
+                // fallback avatar (initials)
+                final initials =
+                    displayName
+                        .split(' ')
+                        .where((s) => s.isNotEmpty)
+                        .map((s) => s[0])
+                        .take(2)
+                        .join()
+                        .toUpperCase();
+                leadingAvatar = CircleAvatar(
+                  radius: 32,
+                  backgroundColor: Colors.blue.shade50,
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
                     ),
+                  ),
+                );
+              }
+
+              return InkWell(
+                onTap: () {
+                  context.push(
+                    '/representative/detail',
+                    extra: {'id': rep.travelRepresentativeProfileId},
+                  );
+                },
+                borderRadius: BorderRadius.circular(18),
+                splashColor: Colors.blue.withOpacity(0.05),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // --- Image section ---
+                      ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(18),
+                          bottomLeft: Radius.circular(18),
+                        ),
+                        child: Image.network(
+                          rep.socialMedia ?? 'https://via.placeholder.com/120',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (_, __, ___) => Container(
+                                width: 120,
+                                height: 120,
+                                color: Colors.grey[100],
+                                child: const Icon(
+                                  Icons.image,
+                                  color: Colors.grey,
+                                  size: 40,
+                                ),
+                              ),
+                        ),
+                      ),
+
+                      // --- Info section ---
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // name + rating
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      displayName,
+                                      style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.black87,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          size: 14,
+                                          color: Colors.orange,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          rating.toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            color: Colors.orange,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 8),
+                              Text(
+                                description,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  height: 1.4,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.tour,
+                                    size: 16,
+                                    color: Colors.blue.shade400,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Tours: $totalTours',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Icon(
+                                    Icons.group,
+                                    size: 16,
+                                    color: Colors.green.shade400,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$totalCustomers khách',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -77,11 +269,24 @@ class TourListPage extends ConsumerWidget {
         style: OutlinedButton.styleFrom(
           backgroundColor: selected ? Colors.blue : Colors.white,
           foregroundColor: selected ? Colors.white : Colors.black,
-          side: BorderSide(color: selected ? Colors.blue : Colors.grey.shade300),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          side: BorderSide(
+            color: selected ? Colors.blue : Colors.grey.shade300,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
         ),
         child: Text(text),
       ),
+    );
+  }
+
+  Widget _InfoChip({required IconData icon, required String label}) {
+    return Chip(
+      avatar: Icon(icon, size: 16, color: Colors.grey[700]),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      backgroundColor: Colors.grey[100],
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
     );
   }
 }
