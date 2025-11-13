@@ -5,6 +5,8 @@ import 'package:group_trip/features/account/representative/providers/rep_provide
 import 'package:group_trip/features/account/representative/data/rep_model.dart';
 // trip types not needed directly here
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
+import 'package:group_trip/features/chat/providers/chat_provider.dart';
 
 class RepresentativeDetail extends ConsumerWidget {
   final String? id;
@@ -14,7 +16,6 @@ class RepresentativeDetail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
   final repsAsync = ref.watch(repListProvider);
-
     // colors similar to Traveloka style
     final primary = Colors.blue.shade700;
     final accentBg = Colors.blue.shade50;
@@ -59,21 +60,28 @@ class RepresentativeDetail extends ConsumerWidget {
         }
 
     // rep is non-null beyond this point
-    final repNonNull = rep!;
+    final repNonNull = rep;
 
-    final avatarUrl =
-      (repNonNull.socialMedia != null && repNonNull.socialMedia!.isNotEmpty)
+    final avatarUrl = (repNonNull.socialMedia != null && repNonNull.socialMedia!.isNotEmpty)
         ? repNonNull.socialMedia!
         : null;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Đơn vị tổ chức'),
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            elevation: 0,
-          ),
-          body: SafeArea(
+    // safe rep id to use for chat/contact checks
+  final repIdForContact = repNonNull.userId.isNotEmpty
+    ? repNonNull.userId
+    : (repNonNull.travelRepresentativeProfileId ?? '');
+
+    final contactExistsAsync = ref.watch(checkContactExistsProvider(repIdForContact));
+    final contactExists = contactExistsAsync.maybeWhen(data: (v) => v, orElse: () => false);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Đơn vị tổ chức'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+      ),
+      body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -202,9 +210,21 @@ class RepresentativeDetail extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {},
+                          onPressed: () {
+                            if (contactExists) {
+                              // open chat screen
+                              context.push('/chat');
+                            } else {
+                              // no contact yet — start contact flow (placeholder)
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Bắt đầu liên hệ...')),
+                              );
+                              // optionally navigate to chat screen to initialize conversation
+                              context.push('/chat');
+                            }
+                          },
                           icon: const Icon(Icons.chat_bubble_outline),
-                          label: const Text('Liên hệ'),
+                          label: Text(contactExists ? 'Tin nhắn' : 'Liên hệ'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -215,6 +235,7 @@ class RepresentativeDetail extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      
                       const SizedBox(width: 10),
                       if (repNonNull.websiteUrl.isNotEmpty)
                         OutlinedButton.icon(

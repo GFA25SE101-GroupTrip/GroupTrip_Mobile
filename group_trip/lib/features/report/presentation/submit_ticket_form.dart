@@ -1,6 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:group_trip/core/utils/dataFormat.dart';
+import 'package:group_trip/features/report/presentation/widgets/buildContract.dart';
+import 'package:group_trip/features/report/presentation/widgets/buildDropdown.dart';
 import 'package:image_picker/image_picker.dart';
 
 class SubmitTicketScreen extends StatefulWidget {
@@ -46,7 +49,7 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
             const SizedBox(height: 10),
 
             // Option: Admin
-            _buildContactOption(
+            Buildcontract(
               title: 'Admin',
               subtitle: 'Hệ thống / Vấn đề thanh toán',
               icon: Icons.admin_panel_settings_rounded,
@@ -56,12 +59,13 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
                 selectedType = null;
                 selectedTrip = null;
               }),
+              selectedContact: selectedContact,
             ),
 
             const SizedBox(height: 12),
 
             // Option: Travel Representative
-            _buildContactOption(
+            Buildcontract(
               title: 'Đại diện du lịch',
               subtitle: 'Vấn đề về chuyến đi',
               icon: Icons.card_travel_rounded,
@@ -71,6 +75,7 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
                 selectedType = null;
                 selectedTrip = null;
               }),
+              selectedContact: selectedContact,
             ),
 
             const SizedBox(height: 20),
@@ -82,7 +87,7 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
             if (selectedContact == 'Admin') ...[
               const Text('Type', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              _buildDropdown<String>(
+              Builddropdown<String>(
                 hint: 'Select type...',
                 value: selectedType,
                 items: adminTypes,
@@ -91,7 +96,7 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
             ] else if (selectedContact == 'Representative') ...[
               const Text('Trip participated', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              _buildDropdown<String>(
+              Builddropdown<String>(
                 hint: 'Select trip...',
                 value: selectedTrip,
                 items: trips,
@@ -100,7 +105,7 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
               const SizedBox(height: 16),
               const Text('Type', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              _buildDropdown<String>(
+              Builddropdown<String>(
                 hint: 'Select type...',
                 value: selectedType,
                 items: representativeTypes,
@@ -198,7 +203,7 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  _formatFileSize(attachedFile),
+                                  FormatFileSize(attachedFile),
                                   style: const TextStyle(fontSize: 13, color: Colors.grey),
                                 ),
                               ],
@@ -249,78 +254,9 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
     );
   }
 
-  Widget _buildContactOption({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? Colors.blue.shade50 : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? Colors.blue : Colors.grey.shade300,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: selected ? Colors.blue : Colors.grey),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: selected ? Colors.blue : Colors.black)),
-                  Text(subtitle,
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.grey)),
-                ],
-              ),
-            ),
-            Radio<String>(
-              value: title == 'Admin' ? 'Admin' : 'Representative',
-              groupValue: selectedContact,
-              onChanged: (_) => onTap(),
-              activeColor: Colors.blue,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildDropdown<T>({
-    required String hint,
-    required T? value,
-    required List<T> items,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return DropdownButtonFormField<T>(
-      decoration: InputDecoration(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      ),
-      hint: Text(hint),
-      value: value,
-      items: items
-          .map((e) => DropdownMenuItem<T>(
-                value: e,
-                child: Text(e.toString()),
-              ))
-          .toList(),
-      onChanged: onChanged,
-    );
-  }
+
+ 
 
   Future<void> _showAttachmentOptions() async {
     showModalBottomSheet<void>(
@@ -386,19 +322,7 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
   }
 
 
-  String _formatFileSize(File? f) {
-    if (f == null) return '';
-    try {
-      final bytes = f.lengthSync();
-      if (bytes < 1024) return '$bytes B';
-      final kb = bytes / 1024;
-      if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
-      final mb = kb / 1024;
-      return '${mb.toStringAsFixed(2)} MB';
-    } catch (_) {
-      return '';
-    }
-  }
+
 
   // document picker removed — image-only attachments supported
 }

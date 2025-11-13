@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:group_trip/features/account/traveller/presentation/traveller_profile_screen.dart';
 import 'package:group_trip/features/blog/data/blog_model.dart';
 // import 'package:group_trip/shared/widgets/atoms/chip_tag.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
@@ -64,7 +65,13 @@ class BlogDetailScreen extends ConsumerWidget {
 
             GestureDetector(
               onTap: () {
-                context.push('/traveller'); // Navigate to traveller profile
+                // Navigate to traveller profile screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TravellerProfileScreen(travellerId: blog.userId),
+                  ),
+                );
               },
               child: Row(
                 children: [

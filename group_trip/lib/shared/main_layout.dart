@@ -1,5 +1,6 @@
 // lib/core/ui/main_layout.dart
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/account/traveller/presentation/traveller_profile_screen.dart';
 import 'package:group_trip/features/auth/presentation/screens/register_screen.dart';
 import 'package:group_trip/features/blog/presentation/blog_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_screen.dart';
@@ -25,7 +26,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   final _pages = [
     const TripScreen(),
-    const CancelProcessScreen(),
+    const TripScreen(),
     const ChatScreen(),
     const BlogScreen(),
     const ProfileScreen(),

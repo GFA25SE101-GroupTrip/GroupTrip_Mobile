@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:intl/intl.dart';
 
 String formatDateToDMY(DateTime date) {
@@ -27,3 +29,18 @@ DateTime combineDate(DateTime date) {
     now.millisecond,
   ).toUtc();
 }
+
+
+  String FormatFileSize(File? f) {
+    if (f == null) return '';
+    try {
+      final bytes = f.lengthSync();
+      if (bytes < 1024) return '$bytes B';
+      final kb = bytes / 1024;
+      if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+      final mb = kb / 1024;
+      return '${mb.toStringAsFixed(2)} MB';
+    } catch (_) {
+      return '';
+    }
+  }

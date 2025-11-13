@@ -189,13 +189,14 @@ class _CreateBlogBottomSheetState extends ConsumerState<CreateBlogBottomSheet> {
     print('Creating blog with data: ${data.toJson()}');
     final blogId = await blogNotifier.createBlog(data);
     // upload cover image if exists
-    print(coverImage);
+    print('coverImage: $coverImage');
     if (blogId != null) {
       var uploadSucceeded = false;
       if (coverImage != null) {
         try {
           await ref.read(imageProvider.notifier).uploadImage(coverImage, blogId);
           uploadSucceeded = true;
+          print('Cover image uploaded successfully');
         } catch (e) {
           // ignore: avoid_print
           print('Failed to upload cover image: $e');

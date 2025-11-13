@@ -74,9 +74,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           return RepresentativeDetail(id: id);
         },
       ),
-      GoRoute(path: '/traveller',
-          builder: (context, state) => const TravellerProfileScreen(),
-        ),
       GoRoute(
             path: '/representative',
             builder: (context, state) => const TourListPage(),
