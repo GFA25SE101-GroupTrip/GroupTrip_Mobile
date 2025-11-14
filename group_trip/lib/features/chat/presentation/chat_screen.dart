@@ -15,7 +15,7 @@ class _ChatScreenState extends State<ChatScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   void _openSearch() {
@@ -79,7 +79,6 @@ class _ChatScreenState extends State<ChatScreen>
                     tabs: const [
                       Tab(text: "Riêng tư"),
                       Tab(text: "Chuyến đi"),
-                      Tab(text: "Đang chờ"),
 
                     ],
                   ),
@@ -100,7 +99,6 @@ class _ChatScreenState extends State<ChatScreen>
               children: [
                 _buildMessageList(type: "private"),
                 _buildMessageList(type: "trip"),
-                _buildMessageList(type: "pending"),
 
               ],
             ),

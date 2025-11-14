@@ -374,7 +374,7 @@ class RepresentativeDetail extends ConsumerWidget {
                               final t = preview[idx];
                               final imageUrl = t.tripImages.isNotEmpty ? t.tripImages.first.imgUrl : 'https://via.placeholder.com/400x200';
                               final price = (t.tripDepartures.isNotEmpty && t.tripDepartures.first.tripCostRanges.isNotEmpty)
-                                  ? '${t.tripDepartures.first.tripCostRanges.first.minCost?.toStringAsFixed(0) ?? '-'}đ'
+                                  ? '${t.tripDepartures.first.tripCostRanges.first.price?.toStringAsFixed(0) ?? '-'}đ'
                                   : '-';
 
                               return Container(

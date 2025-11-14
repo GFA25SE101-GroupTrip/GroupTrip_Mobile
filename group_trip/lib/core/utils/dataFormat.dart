@@ -17,6 +17,16 @@ String formatCurrency(double value) {
     return "$formattedđ";
 }
 
+String formatIntCurrency(int value) {
+    if (value == 0) return "0đ";
+    final str = value.toStringAsFixed(0);
+    final formatted = str.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (m) => "${m[1]}.",
+    );
+    return "$formattedđ";
+}
+
 DateTime combineDate(DateTime date) {
   final now = DateTime.now();
   return DateTime(

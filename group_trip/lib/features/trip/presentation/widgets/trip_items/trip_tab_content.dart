@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/trip/data/trip_rel_model.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/policy_section.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/price_departure_section.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/review_section.dart';
@@ -7,8 +8,9 @@ import 'package:group_trip/features/trip/presentation/widgets/trip_items/schedul
 
 class TripTabContent extends StatelessWidget {
   final int selectedIndex;
+  final TripModel trip; // TripModel? avoided import here to keep loose coupling
 
-  const TripTabContent({super.key, required this.selectedIndex});
+  const TripTabContent({super.key, required this.selectedIndex, required this.trip});
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +34,13 @@ class TripTabContent extends StatelessWidget {
   Widget _buildContentByIndex() {
     switch (selectedIndex) {
       case 0:
-        return ScheduleSection();
+        return ScheduleSection(trip: trip.tripSegments);
       case 1:
-        return PriceDepartureSection();
+        return PriceDepartureSection(tripDepartures: trip.tripDepartures);
       case 2:
-        return PolicySection();
+        return PolicySection(trip: trip.tripRules!);
       case 3:
-        return ReviewSection();
+        return ReviewSection(feedbacks: trip.tripFeedbacks);
       default:
         return const Padding(
           padding: EdgeInsets.all(32),

@@ -1,59 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/trip/data/trip_feedback.dart';
 
 class ReviewSection extends StatelessWidget {
-  const ReviewSection({super.key});
+  final List<TripFeedback> feedbacks;
+  const ReviewSection({super.key, required this.feedbacks});
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> fakeReviews = [
-      {
-        "name": "Minh Anh",
-        "avatar": null,
-        "rating": 5.0,
-        "timeAgo": "2 tuần trước",
-        "content":
-            "Chuyến đi tuyệt vời! Hạ Long thật sự hùng vĩ, du thuyền sang trọng. Sapa thì không khí mát mẻ, cảnh đẹp như tranh. Hướng dẫn viên nhiệt tình, lịch trình hợp lý.",
-        "images": [
-          "https://picsum.photos/seed/2/800/400",
-          "https://picsum.photos/seed/3/800/400",
-        ],
-      },
-      {
-        "name": "Hoàng Nam",
-        "avatar": null,
-        "rating": 4.5,
-        "timeAgo": "1 tháng trước",
-        "content":
-            "Fansipan thật sự ấn tượng! Cáp treo hiện đại, view đỉnh núi tuyệt đẹp. Thăm bản Cát Cát cũng rất thú vị, được tìm hiểu văn hóa dân tộc. Khách sạn sạch sẽ, ăn ngon.",
-        "images": [],
-      },
-      {
-        "name": "Thu Hương",
-        "avatar": null,
-        "rating": 5.0,
-        "timeAgo": "3 tuần trước",
-        "content":
-            "Tour tổ chức rất chuyên nghiệp. Xe đời mới, tài xế lái xe cẩn thận. Du thuyền trên vịnh Hạ Long sang trọng, phòng nghỉ thoải mái. Sẽ giới thiệu cho bạn bè.",
-        "images": [],
-      },
-      {
-        "name": "Quang Minh",
-        "avatar": null,
-        "rating": 4.0,
-        "timeAgo": "1 tháng trước",
-        "content":
-            "Lần đầu đi Sapa, cảnh đẹp quá! Bản Cát Cát rất thú vị, người dân thân thiện. Chỉ có điều thời tiết hơi lạnh nên nhớ mang đồ ấm. Nhìn chung tour rất đáng tiền.",
-        "images": [],
-      },
-    ];
+    final bool hasFeedback = feedbacks.isNotEmpty;
 
     return Column(
-      key: const ValueKey('review'),
+      key: const ValueKey('review_section'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(),
+        _buildHeader(hasFeedback ? feedbacks : null),
         const SizedBox(height: 12),
-        ...fakeReviews.map((review) => _buildReviewCard(review)),
+        if (hasFeedback)
+          ...feedbacks.map((f) => _buildReviewCard(f)).toList()
+        else
+          _buildEmptyState(),
         const SizedBox(height: 16),
         Center(
           child: SizedBox(
@@ -66,7 +31,9 @@ class ReviewSection extends StatelessWidget {
                 ),
                 side: const BorderSide(color: Color(0xFF007AFF)),
               ),
-              onPressed: () {},
+              onPressed: () {
+                // TODO: Xử lý "xem thêm đánh giá"
+              },
               child: const Text(
                 "Xem thêm đánh giá",
                 style: TextStyle(
@@ -81,7 +48,16 @@ class ReviewSection extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(List<TripFeedback>? data) {
+    double avgRating = 0;
+    int total = 0;
+
+    if (data != null && data.isNotEmpty) {
+      total = data.length;
+      avgRating =
+          data.map((e) => e.rating).reduce((a, b) => a + b) / total.toDouble();
+    }
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -93,29 +69,28 @@ class ReviewSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Text(
+            children: [
+              const Text(
                 'Đánh giá chuyến đi ',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Text(
-                '4.8 ',
-                style: TextStyle(
+                avgRating.toStringAsFixed(1),
+                style: const TextStyle(
                   fontSize: 24,
                   color: Color(0xFF007AFF),
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Icon(Icons.star, color: Colors.amber, size: 24),
-              Icon(Icons.star, color: Colors.amber, size: 24),
-              Icon(Icons.star, color: Colors.amber, size: 24),
-              Icon(Icons.star, color: Colors.amber, size: 24),
-              Icon(Icons.star_half, color: Colors.amber, size: 24),
+              const SizedBox(width: 4),
+              const Icon(Icons.star, color: Colors.amber, size: 22),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            "Dựa trên 142 đánh giá",
+            total > 0
+                ? "Dựa trên $total đánh giá"
+                : "Chưa có đánh giá nào",
             style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
           ),
         ],
@@ -123,7 +98,7 @@ class ReviewSection extends StatelessWidget {
     );
   }
 
-  Widget _buildReviewCard(Map<String, dynamic> review) {
+  Widget _buildReviewCard(TripFeedback f) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -135,70 +110,83 @@ class ReviewSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --- Avatar + name + rating ---
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildAvatar(review["avatar"]),
+              _buildAvatar(f.userImg),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review["name"],
+                      f.userName ?? "Người dùng",
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
-                    Row(
-                      children: [
-                        _buildStars(review["rating"]),
-                        const SizedBox(width: 4),
-                        Text(
-                          review["timeAgo"],
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildStars(f.rating.toDouble()),
                   ],
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 8),
+
+          // --- Nội dung bình luận ---
           Text(
-            review["content"],
+            f.comment,
             style: const TextStyle(
               fontSize: 14,
               color: Colors.black87,
               height: 1.4,
             ),
           ),
-          if ((review["images"] as List).isNotEmpty) ...[
+
+          // --- Hình ảnh kèm theo ---
+          if (f.images.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Row(
-              children: (review["images"] as List).map<Widget>((imgUrl) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    // Nếu trong API bạn em có trả về image trong API thì đổi qua dùng .network nhé
-                    child: Image.network(
-                      imgUrl,
-                      width: 80,
-                      height: 60,
-                      fit: BoxFit.cover,
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: f.images.map((url) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        url.img_url,
+                        width: 80,
+                        height: 60,
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: const Center(
+        child: Text(
+          "Chưa có đánh giá nào cho chuyến đi này",
+          style: TextStyle(color: Colors.grey, fontSize: 14),
+        ),
       ),
     );
   }
@@ -217,15 +205,13 @@ class ReviewSection extends StatelessWidget {
 
   Widget _buildStars(double rating) {
     final stars = <Widget>[];
-    int fullStars = rating.floor();
-    bool hasHalf = (rating - fullStars) >= 0.5;
+    int full = rating.floor();
+    bool half = (rating - full) >= 0.5;
 
-    for (int i = 0; i < fullStars; i++) {
+    for (int i = 0; i < full; i++) {
       stars.add(const Icon(Icons.star, color: Colors.amber, size: 14));
     }
-    if (hasHalf) {
-      stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 14));
-    }
+    if (half) stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 14));
     return Row(children: stars);
   }
 }

@@ -1,98 +1,199 @@
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/trip/data/trip_segment.dart';
 
 class ScheduleSection extends StatelessWidget {
-  const ScheduleSection({super.key});
+  final List<TripSegment> trip;
+  const ScheduleSection({super.key, required this.trip});
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> fakeSchedule = [
-      {
-        "day": 1,
-        "title": "Hà Nội – Hạ Long",
-        "activities": [
-          "08:00 – Khởi hành từ Hà Nội",
-          "12:00 – Đến Hạ Long, lên du thuyền",
-          "14:00 – Tham quan Động Thiên Cung",
-          "19:00 – Tự do trên du thuyền, ngắm hoàng hôn",
-        ],
-      },
-      {
-        "day": 2,
-        "title": "Hạ Long – Sapa",
-        "activities": [
-          "07:00 – Ngắm bình minh trên vịnh",
-          "09:00 – Thăm làng chài Cửa Vạn",
-          "14:00 – Trở lại Hà Nội, chuẩn bị đi Sapa",
-          "20:00 – Tàu đêm khởi hành lên Lào Cai",
-        ],
-      },
-      {
-        "day": 3,
-        "title": "Sapa – Fansipan",
-        "activities": [
-          "06:00 – Đến Lào Cai, di chuyển lên Sapa",
-          "09:00 – Cáp treo lên đỉnh Fansipan",
-          "14:00 – Tham quan bản Cát Cát",
-          "19:00 – Nghỉ đêm tại khách sạn ở Sapa",
-        ],
-      },
-    ];
+    List<Map<String, dynamic>> _buildScheduleFromTrip(List<TripSegment> segments) {
+      final out = <Map<String, dynamic>>[];
+
+      if (segments.isNotEmpty) {
+        int day = 1;
+        for (final seg in segments) {
+          String title = 'Đến ${seg.toDestination ?? "điểm tiếp theo"}';
+          if (seg.transport != null && seg.transport!.isNotEmpty) {
+            title += ' bằng ${seg.transport}';
+          }
+
+          final pois = <Map<String, dynamic>>[];
+          if (seg.segmentPOIs != null && seg.segmentPOIs!.isNotEmpty) {
+            for (final poi in seg.segmentPOIs!) {
+              final activities = <String>[];
+              if (poi.poiActivities != null && poi.poiActivities!.isNotEmpty) {
+                for (final act in poi.poiActivities!) {
+                  if (act.isAlternative == false) {
+                    activities.add(act.name ?? '');
+                  }
+                }
+              }
+
+              pois.add({
+                'name': poi.name ?? '',
+                'activities': activities,
+              });
+            }
+          }
+
+          out.add({
+            'day': day++,
+            'title': title,
+            'pois': pois,
+          });
+        }
+      }
+
+      return out.isNotEmpty
+          ? out
+          : [
+              {
+                'day': 1,
+                'title': 'Lịch trình đang cập nhật',
+                'pois': [
+                  {'name': 'Thông tin sẽ được bổ sung sớm.', 'activities': []}
+                ]
+              }
+            ];
+    }
+
+    final schedule = _buildScheduleFromTrip(trip);
 
     return Column(
-      key: const ValueKey('schedule'),
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: List.generate(fakeSchedule.length, (index) {
-        final day = fakeSchedule[index];
-        return Container(
-          key: ValueKey(day['day']),
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+      children: [
+        const Text(
+          'Lịch trình chi tiết',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1C1C1E),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        ),
+        const SizedBox(height: 16),
+
+        ...schedule.map((day) {
+          final pois = day['pois'] as List<Map<String, dynamic>>;
+
+          return Container(
+            key: ValueKey(day['day']),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: const Color(0xFF007AFF),
-                    child: Text(
-                      '${day['day']}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                  // Header ngày
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: const Color(0xFF007AFF),
+                        child: Text(
+                          '${day['day']}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Ngày ${day['day']}: ${day['title']}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1C1C1E),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Ngày ${day['day']}: ${day['title']}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+
+                  const SizedBox(height: 14),
+                  const Divider(height: 1, thickness: 0.8),
+
+                  // Danh sách POI
+                  ...pois.map((poi) {
+                    final activities = poi['activities'] as List<String>;
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on,
+                                size: 18,
+                                color: Color(0xFF007AFF),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  poi['name'],
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (activities.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 28, top: 6),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: activities.map((act) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 2),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle,
+                                          size: 14,
+                                          color: Color(0xFF34C759),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            act,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF3A3A3C),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ],
               ),
-              const SizedBox(height: 8),
-              ...List.generate((day['activities'] as List).length, (i) {
-                final item = day['activities'][i];
-                return Padding(
-                  padding: const EdgeInsets.only(left: 28, bottom: 4),
-                  child: Text(
-                    '• $item',
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                );
-              }),
-            ],
-          ),
-        );
-      }),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

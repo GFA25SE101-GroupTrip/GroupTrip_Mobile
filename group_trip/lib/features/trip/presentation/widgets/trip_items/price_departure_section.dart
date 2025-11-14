@@ -1,54 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:group_trip/features/trip/data/trip_departure_model.dart';
+import 'package:group_trip/features/trip/data/trip_cost_range_model.dart';
 
 class PriceDepartureSection extends StatelessWidget {
-  const PriceDepartureSection({super.key});
+  final List<TripDeparture> tripDepartures;
+
+  const PriceDepartureSection({super.key, required this.tripDepartures});
+
+  String _formatDateRange(DateTime start, DateTime end) {
+    final formatter = DateFormat('dd/MM/yyyy');
+    return "${formatter.format(start)} - ${formatter.format(end)}";
+  }
+
+  String _formatWeekdayRange(DateTime start, DateTime end) {
+    final weekday = [
+      "Chủ nhật",
+      "Thứ 2",
+      "Thứ 3",
+      "Thứ 4",
+      "Thứ 5",
+      "Thứ 6",
+      "Thứ 7",
+    ];
+    return "${weekday[start.weekday % 7]} - ${weekday[end.weekday % 7]}";
+  }
+
+  String _formatCurrency(num? price) {
+    if (price == null) return '';
+    final formatter = NumberFormat("#,###", "vi_VN");
+    return "${formatter.format(price)}đ";
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> fakeDepartures = [
-      {
-        "date": "15/11/2024",
-        "weekday": "Thứ 6 - Thứ 2",
-        "price": "8.500.000đ",
-        "seats": "Còn 8 chỗ",
-      },
-      {
-        "date": "22/11/2024",
-        "weekday": "Thứ 6 - Thứ 2",
-        "price": "8.500.000đ",
-        "seats": "Còn 12 chỗ",
-      },
-    ];
-
-    final List<String> included = [
-      "Xe du lịch đời mới có máy lạnh",
-      "Du thuyền 5 sao tại Hạ Long",
-      "Khách sạn 4 sao tại Sapa",
-      "Vé tham quan theo chương trình",
-      "Bảo hiểm du lịch",
-    ];
+    if (tripDepartures.isEmpty) {
+      return const Center(
+        child: Text("Chưa có lịch khởi hành nào được công bố."),
+      );
+    }
 
     return Column(
       key: const ValueKey('price_departure'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...fakeDepartures.map((item) {
+        ...tripDepartures.map((departure) {
+          final dateText = _formatDateRange(departure.startDate, departure.endDate);
+          final weekdayText = _formatWeekdayRange(departure.startDate, departure.endDate);
+          final memberCount = departure.tripMembers.length;
+          final costRanges = departure.tripCostRanges;
+
           return Container(
-            margin: const EdgeInsets.only(bottom: 12),
+            margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Dòng 1: Ngày + số người tham gia
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      item['date'],
+                      dateText,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -56,36 +81,71 @@ class PriceDepartureSection extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      item['price'],
+                      "$memberCount người tham gia",
                       style: const TextStyle(
-                        color: Color(0xFF007AFF),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      item['weekday'],
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Text(
-                      item['seats'],
-                      style: const TextStyle(
-                        color: Colors.green,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
+                        color: Color(0xFF22C55E),
                       ),
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 4),
+                // Dòng 2: Thứ
+                Text(
+                  weekdayText,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                const SizedBox(height: 10),
+
+                // Danh sách cost ranges (nhiều loại giá)
+                if (costRanges.isEmpty)
+                  const Text(
+                    "Chưa cập nhật giá.",
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: costRanges.map((range) {
+                      final priceText = _formatCurrency(range.price);
+                      final peopleRangeText =
+                          "Từ ${range.minTraveller} - ${range.maxTraveller} người";
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              peopleRangeText,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              priceText,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF007AFF),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -98,7 +158,7 @@ class PriceDepartureSection extends StatelessWidget {
                       side: const BorderSide(color: Color(0xFF007AFF)),
                     ),
                     onPressed: () {
-                      // TODO: handle select date
+                      // TODO: xử lý chọn ngày khởi hành
                     },
                     child: const Text(
                       "Chọn ngày này",
@@ -112,39 +172,7 @@ class PriceDepartureSection extends StatelessWidget {
               ],
             ),
           );
-        }),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Giá bao gồm',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ...included.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(left: 8, bottom: 4),
-                  child: Text(
-                    "• $item",
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        }).toList(),
       ],
     );
   }

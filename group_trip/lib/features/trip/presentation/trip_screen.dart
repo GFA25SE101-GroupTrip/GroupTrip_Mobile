@@ -1,59 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/core/utils/dataFormat.dart';
 import 'package:group_trip/features/trip/data/trip_model.dart';
 import 'package:group_trip/features/trip/presentation/widgets/dropdown_filter.dart';
 import 'package:group_trip/features/trip/presentation/widgets/header.dart';
 import 'package:group_trip/features/trip/presentation/widgets/travelRepresentative/TravelAgencySection.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/trip_card.dart';
+import 'package:group_trip/features/trip/providers/tripProvider.dart';
 
 
-class TripScreen extends StatefulWidget {
+class TripScreen extends ConsumerStatefulWidget {
   static const routeName = '/trip';
   const TripScreen({super.key});
+
   @override
-  State<TripScreen> createState() => _TripScreenState();
+  ConsumerState<TripScreen> createState() => _TripScreenState();
 }
 
-class _TripScreenState extends State<TripScreen> {
+class _TripScreenState extends ConsumerState<TripScreen> {
   bool _showFilter = false;
-  final List<TripModel> trips = [
-    TripModel(
-      imageUrl: 'https://picsum.photos/seed/2/800/400',
-      label: 'HOT',
-      title: 'Hạ Long - Sapa 4N3Đ',
-      description:
-          'Khám phá vịnh Hạ Long và núi rừng Sapa trong chuyến đi 4 ngày 3 đêm đầy thú vị',
-      price: 'Từ 8.500.000đ',
-      date: '15/11/2024',
-      duration: '4 ngày 3 đêm',
-      organizer: 'Saigon Tourist',
-      peopleRange: '2–15 người',
-    ),
-    TripModel(
-      imageUrl: 'https://picsum.photos/seed/2/800/400',
-      label: 'NEW',
-      title: 'Campuchia - Angkor 3N2Đ',
-      description: 'Tham quan quần thể đền Angkor Wat',
-      price: 'Từ 6.200.000đ',
-      date: '20/11/2024',
-      duration: '4 ngày 3 đêm',
-      organizer: 'Vietravel',
-      peopleRange: '2–15 người',
-    ),
-    TripModel(
-      imageUrl: 'https://picsum.photos/seed/2/800/400',
-      label: 'SALE',
-      title: 'Phú Quốc 3N2Đ',
-      description: 'Trải nghiệm biển đảo tuyệt đẹp tại Phú Quốc',
-      price: 'Từ 5.500.000đ',
-      date: '01/12/2024',
-      duration: '4 ngày 3 đêm',
-      organizer: 'TST Tourist',
-      peopleRange: '2–15 người',
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
+    // watch trips from provider
+    final tripsAsync = ref.watch(TripModelProvider);
+
     return SafeArea(
       top: false,
       child: Scaffold(
@@ -119,27 +90,76 @@ class _TripScreenState extends State<TripScreen> {
 
             // Scrollable content below the fixed top area
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    TravelAgencySection(),
-                    const SizedBox(height: 24),
-                    ...trips.map(
-                      (trip) => TripCard(
-                        imageUrl: trip.imageUrl,
-                        label: trip.label,
-                        title: trip.title,
-                        description: trip.description,
-                        price: trip.price,
-                        date: trip.date,
-                        duration: trip.duration,
-                        organizer: trip.organizer,
-                        peopleRange: trip.peopleRange,
-                      ),
-                    ),
-                  ],
+              child: tripsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, st) => SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      TravelAgencySection(),
+                      const SizedBox(height: 24),
+                      Center(child: Text('Lỗi khi tải chuyến đi: $e')),
+                    ],
+                  ),
+                ),
+                data: (trips) => SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      TravelAgencySection(),
+                      const SizedBox(height: 24),
+                      if (trips.isEmpty)
+                        const Center(child: Text('Không có chuyến nào'))
+                      else
+                        ...trips.map((trip) {
+                          // map TripModel (relational) -> UI TripCard fields
+                          final imageUrl = trip.tripImages.isNotEmpty ? trip.tripImages.first.imgUrl : 'https://picsum.photos/seed/${trip.id}/800/400';
+                          final label = trip.status.toString().toUpperCase();
+                          final title = trip.name;
+                          final description = trip.description;
+
+                          String price = '';
+                          String date = '';
+                          String duration = '';
+                          if (trip.tripDepartures.isNotEmpty) {
+                            final d = trip.tripDepartures.first;
+                            if (d.tripCostRanges.isNotEmpty) {
+                              final p = d.tripCostRanges.first.price;
+                              price = 'Từ ${formatIntCurrency(p)}';
+                            }
+                            try {
+                              final sd = d.startDate;
+                              date = '${sd.day.toString().padLeft(2, '0')}/${sd.month.toString().padLeft(2, '0')}/${sd.year}';
+                              final diff = d.endDate.difference(d.startDate).inDays;
+                              if (diff > 0) {
+                                duration = '$diff ngày';
+                              }
+                            } catch (_) {
+                              // ignore parsing errors
+                            }
+                          }
+
+                          final organizer = trip.creatorName ?? trip.creatorId;
+                          final peopleRange = '${trip.minUsers}-${trip.maxUsers} người';
+
+                          return TripCard(
+                            imageUrl: imageUrl,
+                            label: label,
+                            title: title,
+                            description: description,
+                            price: price,
+                            date: date,
+                            duration: duration,
+                            organizer: organizer,
+                            peopleRange: peopleRange,
+                            tripId: trip.id,
+                            trip: trip,
+                          );
+                        }),
+                    ],
+                  ),
                 ),
               ),
             ),

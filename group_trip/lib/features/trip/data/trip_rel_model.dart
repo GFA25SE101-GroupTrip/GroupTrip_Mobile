@@ -2,6 +2,7 @@
 import 'package:group_trip/features/trip/data/trip_departure_model.dart';
 import 'package:group_trip/features/trip/data/trip_feedback.dart';
 import 'package:group_trip/features/trip/data/trip_image.dart';
+import 'package:group_trip/features/trip/data/trip_rule.dart';
 import 'package:group_trip/features/trip/data/trip_segment.dart';
 import 'package:group_trip/features/trip/data/trip_tag_relation.dart';
 class TripModel {
@@ -29,7 +30,7 @@ class TripModel {
   final List<TripTagRelation> tripTagRelations;
   final List<TripImage> tripImages;
   final List<TripFeedback> tripFeedbacks;
-  final String? tripRules;
+  final TripRule? tripRules;
 
   TripModel({
     required this.id,
@@ -60,47 +61,81 @@ class TripModel {
   });
 
   factory TripModel.fromJson(Map<String, dynamic> json) {
+    int _parseInt(dynamic v) {
+      if (v == null) return 0;
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      try {
+        return int.parse(v.toString());
+      } catch (_) {
+        return 0;
+      }
+    }
+
+    String _stringify(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v;
+      if (v is num) return v.toString();
+      if (v is Map) {
+        // common keys to try
+        final keys = ['url', 'img', 'path', 'image', 'file', 'name'];
+        for (final k in keys) {
+          if (v.containsKey(k) && v[k] != null) return v[k].toString();
+        }
+        if (v.containsKey('id')) return v['id'].toString();
+        return v.values.isNotEmpty ? v.values.first.toString() : '';
+      }
+      return v.toString();
+    }
+
+    List<dynamic> _toList(dynamic v) {
+      if (v == null) return <dynamic>[];
+      if (v is List) return v;
+      if (v is Map && v['data'] is List) return v['data'] as List<dynamic>;
+      return [v];
+    }
+
     return TripModel(
-      id: json['id'],
-      creatorId: json['creatorId'],
-       creatorName: json['creatorName'] as String?, // 👈 nullable
-    creatorImg: json['creator_Img'] as String?,  // 👈 nullable
-      userCustomID: json['userCustomID'],
-      baseTripId: json['baseTripId'],
+      id: _stringify(json['id']),
+      creatorId: _stringify(json['creatorId']),
+      creatorName: _stringify(json['creatorName']), // nullable-ish
+      creatorImg: _stringify(json['creator_Img']), // nullable-ish
+      userCustomID: _stringify(json['userCustomID']),
+      baseTripId: _stringify(json['baseTripId']),
       isCustom: json['isCustom'] ?? false,
-      name: json['name'],
-      fromDestination: json['fromDestination'],
+      name: _stringify(json['name']),
+      fromDestination: _stringify(json['fromDestination']),
       fromLongtitude: json['fromLongtitude']?.toDouble(),
       fromLatitude: json['fromLatitude']?.toDouble(),
-      finalDestination: json['finalDestination'],
       finalLongtitude: json['finalLongtitude']?.toDouble(),
       finalLatitude: json['finalLatitude']?.toDouble(),
-      description: json['description'],
-      status: json['status'],
-      minUsers: json['minUsers'] ?? 0,
-      maxUsers: json['maxUsers'] ?? 0,
+      finalDestination: _stringify(json['finalDestination']),
+      description: _stringify(json['description']),
+      status: _stringify(json['status']),
+      minUsers: _parseInt(json['minUsers']),
+      maxUsers: _parseInt(json['maxUsers']),
       avarageRating: (json['avarageRating'] ?? 0).toDouble(),
-      tripDepartures: (json['tripDepartures'] as List<dynamic>?)
-              ?.map((e) => TripDeparture.fromJson(e))
-              .toList() ??
-          [],
-      tripSegments: (json['tripSegments'] as List<dynamic>?)
-              ?.map((e) => TripSegment.fromJson(e))
-              .toList() ??
-          [],
-      tripTagRelations: (json['tripTagRelations'] as List<dynamic>?)
-              ?.map((e) => TripTagRelation.fromJson(e))
-              .toList() ??
-          [],
-      tripImages: (json['tripImages'] as List<dynamic>?)
-              ?.map((e) => TripImage.fromJson(e))
-              .toList() ??
-          [],
-      tripFeedbacks: (json['tripFeedbacks'] as List<dynamic>?)
-              ?.map((e) => TripFeedback.fromJson(e))
-              .toList() ??
-          [],
-      tripRules: json['tripRules'],
+        tripDepartures: _toList(json['tripDepartures'])
+          .where((e) => e != null && e is Map)
+          .map((e) => TripDeparture.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+        tripSegments: _toList(json['tripSegments'])
+          .where((e) => e != null && e is Map)
+          .map((e) => TripSegment.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+        tripTagRelations: _toList(json['tripTagRelations'])
+          .where((e) => e != null && e is Map)
+          .map((e) => TripTagRelation.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+        tripImages: _toList(json['tripImages'])
+          .where((e) => e != null && e is Map)
+          .map((e) => TripImage.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+        tripFeedbacks: _toList(json['tripFeedbacks'])
+          .where((e) => e != null && e is Map)
+          .map((e) => TripFeedback.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      tripRules: json['tripRules'] != null ? TripRule.fromJson(Map<String, dynamic>.from(json['tripRules'])) : null,
     );
   }
 

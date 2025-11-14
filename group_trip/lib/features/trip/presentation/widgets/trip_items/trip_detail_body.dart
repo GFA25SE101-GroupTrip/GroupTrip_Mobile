@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart' hide TabBar;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/features/trip/data/trip_rel_model.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/trip_tab_content.dart';
+import 'package:group_trip/features/trip/providers/tripProvider.dart';
 import 'trip_highlight_section.dart';
 import 'trip_join_button.dart';
 import '../tab_bar_item.dart';
 
-class TripDetailBody extends StatefulWidget {
+class TripDetailBody extends ConsumerStatefulWidget {
+  final String tripId;
   final String title;
   final String price;
   final String description;
@@ -13,18 +17,18 @@ class TripDetailBody extends StatefulWidget {
 
   const TripDetailBody({
     super.key,
+    required this.tripId,
     required this.title,
     required this.price,
     required this.description,
     required this.duration,
     required this.peopleRange,
   });
-
   @override
-  State<TripDetailBody> createState() => _TripDetailBodyState();
+  ConsumerState<TripDetailBody> createState() => _TripDetailBodyState();
 }
 
-class _TripDetailBodyState extends State<TripDetailBody> {
+class _TripDetailBodyState extends ConsumerState<TripDetailBody> {
   int _selectedTabIndex = 0;
 
   final List<String> _tabs = [
@@ -36,6 +40,8 @@ class _TripDetailBodyState extends State<TripDetailBody> {
 
   @override
   Widget build(BuildContext context) {
+    final TripdetailContent = ref.watch(TripDetailModelProvider(widget.tripId));
+    TripModel TripdetailContentData = TripdetailContent.asData!.value;
     return SingleChildScrollView(
       child: Container(
         margin: const EdgeInsets.only(top: 280),
@@ -112,7 +118,7 @@ class _TripDetailBodyState extends State<TripDetailBody> {
                 ],
               ),
               const SizedBox(height: 24),
-              const TripHighlightSection(),
+              TripHighlightSection(tags: TripdetailContentData.tripTagRelations),
               const SizedBox(height: 24),
               const JoinTripButton(),
               const SizedBox(height: 24),
@@ -126,7 +132,7 @@ class _TripDetailBodyState extends State<TripDetailBody> {
                 },
               ),
               const SizedBox(height: 20),
-              TripTabContent(selectedIndex: _selectedTabIndex),
+              TripTabContent(selectedIndex: _selectedTabIndex, trip: TripdetailContentData),
             ],
           ),
         ),

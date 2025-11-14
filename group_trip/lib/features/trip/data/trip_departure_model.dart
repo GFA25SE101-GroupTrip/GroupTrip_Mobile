@@ -27,15 +27,48 @@ class TripDeparture {
   });
 
   factory TripDeparture.fromJson(Map<String, dynamic> json) {
+    int _parseInt(dynamic v) {
+      if (v == null) return 0;
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      try {
+        return int.parse(v.toString());
+      } catch (_) {
+        return 0;
+      }
+    }
+    DateTime _parseDate(dynamic v) {
+      if (v == null) return DateTime.fromMillisecondsSinceEpoch(0);
+      try {
+        if (v is String) return DateTime.parse(v);
+        if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+        if (v is double) return DateTime.fromMillisecondsSinceEpoch(v.toInt());
+        if (v is Map) {
+          // try common keys
+          final candidates = ['date', 'startDate', 'value', 'iso', 'time'];
+          for (final k in candidates) {
+            if (v.containsKey(k) && v[k] != null) {
+              final val = v[k];
+              if (val is String) return DateTime.parse(val);
+              if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+            }
+          }
+        }
+        return DateTime.parse(v.toString());
+      } catch (_) {
+        return DateTime.fromMillisecondsSinceEpoch(0);
+      }
+    }
+
     return TripDeparture(
       id: json['id'],
       tripId: json['tripId'],
-      startDate: DateTime.parse(json['startDate']),
-      endDate: DateTime.parse(json['endDate']),
+      startDate: _parseDate(json['startDate']),
+      endDate: _parseDate(json['endDate']),
       departureStatus: json['departureStatus'],
-      depositTime: DateTime.parse(json['depositTime']),
-      fullPayTime: DateTime.parse(json['fullPayTime']),
-      numberMemberIn: json['numberMemberIn'] ?? 0,
+      depositTime: _parseDate(json['depositTime']),
+      fullPayTime: _parseDate(json['fullPayTime']),
+      numberMemberIn: _parseInt(json['numberMemberIn']),
       tripCostRanges: (json['tripCostRanges'] as List<dynamic>?)
               ?.map((e) => TripCostRange.fromJson(e))
               .toList() ??

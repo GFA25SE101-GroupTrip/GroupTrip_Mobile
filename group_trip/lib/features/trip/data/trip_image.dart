@@ -8,9 +8,22 @@ class TripImage {
   });
 
   factory TripImage.fromJson(Map<String, dynamic> json) {
+    String _imgFrom(dynamic v) {
+      if (v == null) return '';
+      if (v is String) return v;
+      if (v is Map) {
+        final keys = ['url', 'img', 'path', 'img_url', 'file'];
+        for (final k in keys) {
+          if (v.containsKey(k) && v[k] != null) return v[k].toString();
+        }
+        return v.values.first.toString();
+      }
+      return v.toString();
+    }
+
     return TripImage(
-      id: json['id'],
-      imgUrl: json['img_url'],
+      id: json['id']?.toString() ?? '',
+      imgUrl: _imgFrom(json['img_url'] ?? json['url'] ?? json['image']),
     );
   }
 

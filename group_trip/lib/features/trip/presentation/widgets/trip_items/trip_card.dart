@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/trip/data/trip_rel_model.dart';
 import 'package:group_trip/features/trip/presentation/trip_detail_screen.dart';
 
 class TripCard extends StatelessWidget {
@@ -11,6 +12,8 @@ class TripCard extends StatelessWidget {
   final String duration;
   final String organizer;
   final String peopleRange;
+  final String? tripId;
+  final TripModel? trip;
 
   const TripCard({
     super.key,
@@ -23,6 +26,8 @@ class TripCard extends StatelessWidget {
     required this.duration,
     required this.organizer,
     required this.peopleRange,
+    this.tripId,
+    this.trip,
   });
 
   @override
@@ -176,6 +181,8 @@ class TripCard extends StatelessWidget {
                               description: description,
                               duration: duration,
                               peopleRange: peopleRange,
+                              tripId: tripId,
+                              trip: trip,
                             ),
                           ),
                         );
