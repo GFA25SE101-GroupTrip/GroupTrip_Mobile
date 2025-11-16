@@ -1,271 +1,618 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:group_trip/core/utils/dataFormat.dart';
 import 'package:group_trip/features/report/presentation/widgets/detailRow.dart';
 import 'package:group_trip/features/report/presentation/widgets/fileChip.dart';
+import 'package:group_trip/features/report/presentation/widgets/fullscreenImage.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:group_trip/features/report/presentation/widgets/section_card.dart';
+import 'package:group_trip/features/report/providers/report_provider.dart';
 
-class ComplaintDetailScreen extends StatelessWidget {
-  const ComplaintDetailScreen({super.key});
+class ComplaintDetailScreen extends ConsumerWidget {
+  final String reportId;
+  const ComplaintDetailScreen({super.key, required this.reportId});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Complaint #0234',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.black),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Icon(Icons.more_vert, color: Colors.black),
-          )
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.hourglass_top, size: 16, color: Colors.amber),
-                const SizedBox(width: 4),
-                Text(
-                  'Đang chờ xử lý',
-                  style: GoogleFonts.inter(fontSize: 13, color: Colors.amber[800]),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = ref.watch(reportDetailProvider(reportId));
 
-            // Chi tiết khiếu nại
-            SectionCard(
-              title: 'Chi tiết khiếu nại',
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DetailRow(label: 'Loại:', value: 'Refund', trailingIcon: Icons.refresh, color: Colors.green),
-                  DetailRow(label: 'Gửi tới:', value: 'Admin'),
-                  DetailRow(label: 'Ngày tạo:', value: '18 Oct 2025'),
-                  DetailRow(label: 'Cập nhật:', value: '20 Oct 2025'),
-                  const SizedBox(height: 10),
-                  Row(
+    return provider.when(
+      loading:
+          () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error:
+          (err, st) => Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                'Complaint',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            body: Center(child: Text('Lỗi khi tải dữ liệu: $err')),
+          ),
+      data: (report) {
+        final resp = report.responseReportModel;
+        return Scaffold(
+          backgroundColor: const Color(0xFFF9FAFB),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              report.title.isNotEmpty ? report.title : 'Complaint',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+            actions: const [
+              Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: Icon(Icons.more_vert, color: Colors.black),
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      report.status.toLowerCase() == 'resolved'
+                          ? Icons.check_circle
+                          : Icons.hourglass_top,
+                      size: 16,
+                      color:
+                          report.status.toLowerCase() == 'resolved'
+                              ? Colors.green
+                              : Colors.amber,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      report.status.isNotEmpty
+                          ? report.status
+                          : 'Đang chờ xử lý',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color:
+                            report.status.toLowerCase() == 'resolved'
+                                ? Colors.green[800]
+                                : Colors.amber[800],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Chi tiết khiếu nại
+                SectionCard(
+                  title: 'Chi tiết khiếu nại',
+                  color: Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        clipBehavior: Clip.hardEdge,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
+                      // DetailRow(label: 'Loại:', value: report.type),
+                      DetailRow(label: 'Gửi tới:', value: report.receiverName),
+                      if (report.createTime != null)
+                        DetailRow(
+                          label: 'Ngày tạo:',
+                          value: report.createTime!,
                         ),
-                        child: Image.network(
-                          'https://picsum.photos/200/300',
-                          fit: BoxFit.cover,
+                      // if (resp != null) DetailRow(label: 'Cập nhật:', value: resp.createTime),
+                      const SizedBox(height: 10),
+                      if (report.tripId != null || report.tripName != null)
+                        Row(
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              clipBehavior: Clip.hardEdge,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Image.network(
+                                // If you have a trip image url, use it; otherwise a placeholder
+                                'https://picsum.photos/200/300',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (report.tripName != null)
+                                    Text(
+                                      report.tripName!,
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  if (report.tripId != null)
+                                    Text(
+                                      'Trip ID: ${report.tripId!}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (report.tripId != null)
+                              TextButton(
+                                onPressed: () {},
+                                child: const Text('Xem chi tiết'),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Nội dung khiếu nại
+                SectionCard(
+                  title: 'Nội dung khiếu nại',
+                  color: Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tiêu đề',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        report.title,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Mô tả',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // The API may not include a separate description field; if it does, show it.
+                      // For now use receiverName as fallback not needed; only show if present.
+                      // If your ReportResponse has a dedicated content field, replace the following.
+                      if (resp == null)
+                        const SizedBox.shrink()
+                      else
+                        // Text(resp.content, style: GoogleFonts.inter(fontSize: 14)), sửa thành report.content
+                        const SizedBox(height: 12),
+                      if (report.attach.isNotEmpty)
+                        Text(
+                          'Tệp đính kèm:',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      if (report.attach.isNotEmpty)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children:
+                              report.attach.map((a) {
+                                final lower = a.toLowerCase();
+                                final isImage =
+                                    lower.endsWith('.png') ||
+                                    lower.endsWith('.jpg') ||
+                                    lower.endsWith('.jpeg') ||
+                                    lower.endsWith('.gif') ||
+                                    lower.endsWith('.webp');
+                                return GestureDetector(
+                                  onTap: () async {
+                                    if (lower.endsWith('.pdf')) {
+                                      final uri = Uri.parse(a);
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          fullscreenDialog: true,
+                                          builder:
+                                              (_) => Scaffold(
+                                                appBar: AppBar(
+                                                  title: const Text('Xem PDF'),
+                                                  leading: IconButton(
+                                                    icon: const Icon(
+                                                      Icons.close,
+                                                    ),
+                                                    onPressed:
+                                                        () =>
+                                                            Navigator.of(
+                                                              context,
+                                                            ).pop(),
+                                                  ),
+                                                ),
+                                                body: WebViewWidget(
+                                                  controller:
+                                                      WebViewController()
+                                                        ..setJavaScriptMode(
+                                                          JavaScriptMode
+                                                              .unrestricted,
+                                                        )
+                                                        ..loadRequest(uri),
+                                                ),
+                                              ),
+                                        ),
+                                      );
+                                    } else if (isImage) {
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => Scaffold(
+                                                backgroundColor: Colors.black,
+                                                appBar: AppBar(
+                                                  backgroundColor: Colors.black,
+                                                  leading: IconButton(
+                                                    icon: const Icon(
+                                                      Icons.close,
+                                                    ),
+                                                    onPressed:
+                                                        () =>
+                                                            Navigator.of(
+                                                              context,
+                                                            ).pop(),
+                                                  ),
+                                                ),
+                                                body: Center(
+                                                  child: InteractiveViewer(
+                                                    child: Image.network(
+                                                      a,
+                                                      fit: BoxFit.contain,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                        ),
+                                      );
+                                    }
+                                    // else {
+                                    //   final uri = Uri.parse(a);
+                                    //   await Navigator.of(context).push(MaterialPageRoute(
+                                    //     fullscreenDialog: true,
+                                    //     builder: (_) => Scaffold(
+                                    //       appBar: AppBar(
+                                    //         title: const Text('Mở tệp đính kèm'),
+                                    //         leading: IconButton(
+                                    //           icon: const Icon(Icons.close),
+                                    //           onPressed: () => Navigator.of(context).pop(),
+                                    //         ),
+                                    //       ),
+                                    //       body: WebViewWidget(
+                                    //         controller: WebViewController()
+                                    //           ..setJavaScriptMode(JavaScriptMode.unrestricted)
+                                    //           ..loadRequest(uri),
+                                    //       ),
+                                    //     ),
+                                    //   ));
+                                    // }
+                                  },
+                                  child:
+                                      isImage
+                                          ? Container(
+                                            width: 80,
+                                            height: 80,
+                                            clipBehavior: Clip.hardEdge,
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Image.network(
+                                              a,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (c, e, s) => const Icon(
+                                                    Icons.broken_image,
+                                                  ),
+                                            ),
+                                          )
+                                          : FileChip(
+                                            name: a,
+                                            size: '',
+                                            icon: Icons.attach_file,
+                                            color: Colors.grey,
+                                          ),
+                                );
+                              }).toList(),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Phản hồi từ Admin (optional)
+                if (resp != null)
+                  SectionCard(
+                    title: 'Phản hồi từ Admin',
+                    color: const Color(0xFFEFFFF6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              backgroundColor: Colors.green,
+                              child: Icon(Icons.person, color: Colors.white),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    resp.responsederName,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  // Text(resp.createdBy, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[700])),
+                                ],
+                              ),
+                            ),
+                            if (resp.createTime.isNotEmpty)
+                              Text(
+                                formatDateToDMYString(resp.createTime),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (resp.title.isNotEmpty)
+                                Text(
+                                  resp.title,
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              const SizedBox(height: 6),
+                              Text(
+                                resp.content,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              if (resp.attachments.isNotEmpty)
+                                Text(
+                                  'Tệp đính kèm:',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              const SizedBox(height: 6),
+                              if (resp.attachments.isNotEmpty)
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children:
+                                      resp.attachments.map((a) {
+                                        return GestureDetector(
+                                          onTap: () async {
+                                            final lower = a.toLowerCase();
+                                            if (lower.endsWith('.pdf')) {
+                                              final uri = Uri.parse(a);
+                                              await Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  fullscreenDialog: true,
+                                                  builder:
+                                                      (_) => Scaffold(
+                                                        appBar: AppBar(
+                                                          title: const Text(
+                                                            'Xem PDF',
+                                                          ),
+                                                          leading: IconButton(
+                                                            icon: const Icon(
+                                                              Icons.close,
+                                                            ),
+                                                            onPressed:
+                                                                () =>
+                                                                    Navigator.of(
+                                                                      context,
+                                                                    ).pop(),
+                                                          ),
+                                                        ),
+                                                        body: WebViewWidget(
+                                                          controller:
+                                                              WebViewController()
+                                                                ..setJavaScriptMode(
+                                                                  JavaScriptMode
+                                                                      .unrestricted,
+                                                                )
+                                                                ..loadRequest(
+                                                                  uri,
+                                                                ),
+                                                        ),
+                                                      ),
+                                                ),
+                                              );
+                                            } else if (lower.endsWith('.png') ||
+                                                lower.endsWith('.jpg') ||
+                                                lower.endsWith('.jpeg') ||
+                                                lower.endsWith('.gif') ||
+                                                lower.endsWith('.webp')) {
+                                              await Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (_) =>
+                                                          FullScreenImageViewer(
+                                                            imageUrl: a,
+                                                          ),
+                                                ),
+                                              );
+                                            }
+
+                                            // else if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.gif') || lower.endsWith('.webp')) {
+                                            //   await Navigator.of(context).push(MaterialPageRoute(
+                                            //     builder: (_) => Scaffold(
+                                            //       backgroundColor: Colors.black,
+                                            //       appBar: AppBar(backgroundColor: Colors.black, leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop())),
+                                            //       body: Center(
+                                            //         child: InteractiveViewer(
+                                            //           child: Image.network(a, fit: BoxFit.contain),
+                                            //         ),
+                                            //       ),
+                                            //     ),
+                                            //   ));
+                                            // }
+                                            // else {
+                                            //   final uri = Uri.parse(a);
+                                            //   await Navigator.of(context).push(MaterialPageRoute(
+                                            //     fullscreenDialog: true,
+                                            //     builder: (_) => Scaffold(
+                                            //       appBar: AppBar(
+                                            //         title: const Text('Mở tệp đính kèm'),
+                                            //         leading: IconButton(
+                                            //           icon: const Icon(Icons.close),
+                                            //           onPressed: () => Navigator.of(context).pop(),
+                                            //         ),
+                                            //       ),
+                                            //       body: WebViewWidget(
+                                            //         controller: WebViewController()
+                                            //           ..setJavaScriptMode(JavaScriptMode.unrestricted)
+                                            //           ..loadRequest(uri),
+                                            //       ),
+                                            //     ),
+                                            //   ));
+                                            // }
+                                          },
+                                          child: FileChip(
+                                            name: a,
+                                            size: '',
+                                            icon: Icons.attach_file,
+                                            color: Colors.blue,
+                                          ),
+                                        );
+                                      }).toList(),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Khiếu nại đã được xử lý',
+                              style: GoogleFonts.inter(
+                                color: Colors.green[800],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        if (resp.createTime.isNotEmpty)
+                          Text(
+                            'Cập nhật lần cuối: ${resp.createTime}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
+                // Action buttons (keep present but you can hook them up)
+                SizedBox(
+                  width: double.infinity,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E90FF),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () {},
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Ninh Bình', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                            Text('Adventure 3D2N',
-                                style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[700])),
-                            const SizedBox(height: 4),
-                            Text('7 ngày 6 đêm',
-                                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500])),
-                          ],
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text('Xem chi tiết'),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Nội dung khiếu nại
-            SectionCard(
-              title: 'Nội dung khiếu nại',
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Tiêu đề',
-                      style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600])),
-                  const SizedBox(height: 4),
-                  Text('Yêu cầu hoàn tiền do hoãn chuyến',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15)),
-                  const SizedBox(height: 12),
-                  Text('Mô tả',
-                      style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600])),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Chuyến đi bị hủy do thời tiết, tôi mong được hoàn 80% phí. Tôi đã chuẩn bị tất cả giấy tờ chuyến đi như vé máy bay và hợp đồng để chứng minh.',
-                    style: GoogleFonts.inter(fontSize: 14),
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Tệp đính kèm:',
-                      style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600])),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FileChip(name: 'booking_receipt.jpg', size: '2.4 MB', icon: Icons.image, color: Colors.red),
-                      FileChip(name: 'weather_report.pdf', size: '1.2 MB', icon: Icons.picture_as_pdf, color: Colors.orange),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Phản hồi từ Admin
-            SectionCard(
-              title: 'Phản hồi từ Admin',
-              color: const Color(0xFFEFFFF6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        backgroundColor: Colors.green,
-                        child: Icon(Icons.person, color: Colors.white),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Admin',
-                                style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w600, fontSize: 15)),
-                            Text('Support',
-                                style: GoogleFonts.inter(
-                                    fontSize: 13, color: Colors.grey[700])),
-                          ],
-                        ),
-                      ),
-                      Text('Oct 20, 2025',
-                          style:
-                              GoogleFonts.inter(fontSize: 12, color: Colors.grey[500])),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Refund approved',
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E90FF),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () {},
+                          child: Text(
+                            'Resolve',
                             style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w600, fontSize: 15)),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Chúng tôi đã xử lý hoàn tiền và tài khoản của bạn sẽ nhận trong vài ngày tới.',
-                          style:
-                              GoogleFonts.inter(fontSize: 14, color: Colors.grey[800]),
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 10),
-                        Text('Tệp đính kèm:',
-                            style: GoogleFonts.inter(
-                                fontSize: 13, color: Colors.grey[600])),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            FileChip(name: 'evidence1.jpg', size: '1.4 MB', icon: Icons.image, color: Colors.blue),
-                            FileChip(name: 'invoice.pdf', size: '0.9 MB', icon: Icons.picture_as_pdf, color: Colors.orange),
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.green, size: 18),
-                      const SizedBox(width: 6),
-                      Text('Khiếu nại đã được xử lý thành công',
-                          style: GoogleFonts.inter(
-                              color: Colors.green[800], fontWeight: FontWeight.w500)),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text('Cập nhật lần cuối: 20 Oct 2025',
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500])),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 20),
-            // Action buttons with improved spacing
-            SizedBox(
-              width: double.infinity,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E90FF),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {},
-                      child: Text(
-                        'Cancel',
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E90FF),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {},
-                      child: Text(
-                        'Resolve',
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
-
 }

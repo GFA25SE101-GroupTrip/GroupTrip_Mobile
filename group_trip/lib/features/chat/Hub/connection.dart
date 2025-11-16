@@ -1,56 +1,54 @@
 import 'package:signalr_netcore/signalr_client.dart';
 
 class SignalRService {
-  late HubConnection connection;
+  HubConnection? connection;
 
   Future<void> initConnection(String token) async {
-    final serverUrl = "https://gt-chat.grouptrip.site/api/chats";  // URL Hub
+    if (connection != null) return;
+
+    final serverUrl = "https://gt-chat.grouptrip.site/chathub";
 
     connection = HubConnectionBuilder()
         .withUrl(
       serverUrl,
       options: HttpConnectionOptions(
         accessTokenFactory: () async => token,
+        transport: HttpTransportType.WebSockets,
+        skipNegotiation: true,
       ),
-    ).build();
+    ).withAutomaticReconnect().build();
 
-    // Lắng nghe tin nhắn
-    connection.on("ReceiveMessage", (args) {
-      final senderId = args?[0];
-      final content = args?[1];
-      final chatId = args?[2];
-
-      print("📩 New message from $senderId: $content (chat $chatId)");
+    connection!.on("ReceiveMessage", (args) {
+      print("📩 New message: $args");
     });
 
-    // Lắng nghe đã đọc tin nhắn
-    connection.on("MessagesMarkedAsRead", (args) {
-      final chatId = args?[0];
-      final userId = args?[1];
-
-      print("👁 User $userId read messages in chat $chatId");
+    connection!.on("MessagesMarkedAsRead", (args) {
+      print("👁 Read: $args");
     });
 
-    // Connect
-    await connection.start();
-    print("SignalR Connected!");
+    try {
+      await connection!.start();
+      print("✅ SignalR Connected!");
+    } catch (e, st) {
+      print("❌ SignalR start error: $e");
+      print(st);
+    }
   }
 
-  Future<void> joinGroup(String chatId) async {
-    await connection.invoke("JoinGroup", args: [chatId]);
-  }
-
-  Future<void> sendMessage(Map<String, dynamic> message, String senderId, String chatId) async {
-    await connection.invoke(
+  /// FIXED: thêm token vào args
+  Future<void> sendMessage(
+    Map<String, dynamic> message,
+    String senderId,
+    String chatId,
+    String token,
+  ) async {
+    await connection!.invoke(
       "SendMessage",
-      args: [message, senderId, chatId],
+      args: [message, senderId, chatId, token],
     );
   }
 
   Future<void> markRead(String chatId, String userId) async {
-    await connection.invoke(
-      "MarkMessagesAsRead",
-      args: [chatId, userId],
-    );
+    await connection!.invoke("MarkMessagesAsRead", args: [chatId, userId]);
   }
 }

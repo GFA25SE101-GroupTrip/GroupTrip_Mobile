@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:group_trip/core/providers/user_storage_provider.dart';
+import 'package:group_trip/features/report/presentation/complaint_detail_screen.dart';
+import 'package:group_trip/features/report/providers/report_provider.dart';
 
-class HelpCenterScreen extends StatelessWidget {
+class HelpCenterScreen extends ConsumerWidget {
   const HelpCenterScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.read(userFromStorageProvider);
+    final userId = user.asData?.value?.userId ?? '';
+    final reportsAsyncValue = ref.watch(reportListProvider(userId));
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -97,29 +105,54 @@ class HelpCenterScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
+            reportsAsyncValue.when(
+              data: (reports) {
+                if (reports.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'Chưa có yêu cầu hỗ trợ nào.',
+                      style: GoogleFonts.inter(
+                          fontSize: 14, color: Colors.grey[600]),
+                    ),
+                  );
+                }
+                return Column(
+                  children: reports.map((report) {
+                    return _buildTicketItem(
+                      title: report.title,
+                      status: report.status,
+                      date: report.createTime ?? '',
+                      receiver: report.receiverName,
+                      related: report.tripName,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ComplaintDetailScreen(reportId: report.id,),
+                          ),
+                        );
+                      },
+                      statusColor: report.status == 'Resolved'
+                          ? Colors.green
+                          : Colors.amber,
+                          );
 
-            _buildTicketItem(
-              title: 'Refund Trip to Đà Lạt',
-              status: 'Resolved',
-              statusColor: Colors.green,
-              receiver: 'Admin Support',
-              related: 'Đà Lạt Adventure - DL001',
-              date: 'Oct 15, 2024',
-              onTap: () {
-                // Navigate to detail screen
-                context.push('/profile/help/detail');
+
+                  }).toList(),
+                );
               },
+              loading: () => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              error: (err, stack) => Center(
+                child: Text(
+                  'Lỗi khi tải yêu cầu hỗ trợ: $err',
+                  style:
+                      GoogleFonts.inter(fontSize: 14, color: Colors.redAccent),
+                ),
+              ),
             ),
-            _buildTicketItem(
-              title: 'App error when paying',
-              status: 'Pending',
-              statusColor: Colors.amber,
-              date: 'Oct 10, 2024',
-              onTap: () {
-                // Navigate to detail screen
-                context.push('/profile/help/detail');
-              },
-            ),
+           
           ],
         ),
       ),

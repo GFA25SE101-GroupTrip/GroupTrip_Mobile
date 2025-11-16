@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:group_trip/core/config/secure_storage_service.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
+import 'package:group_trip/core/signalr/signalr_provider.dart';
 import 'package:group_trip/features/chat/data/chat_message.dart';
-import 'package:group_trip/features/chat/presentation/widgets/dateTitle.dart';
+// import 'package:group_trip/features/chat/presentation/widgets/dateTitle.dart';
 import 'package:group_trip/features/chat/presentation/widgets/incomingImage.dart';
 import 'package:group_trip/features/chat/presentation/widgets/incomingText.dart';
 import 'package:group_trip/features/chat/presentation/widgets/incomingTripCard.dart';
@@ -13,7 +14,7 @@ import 'package:group_trip/features/chat/presentation/widgets/outgoindImage.dart
 import 'package:group_trip/features/chat/presentation/widgets/outgoingText.dart';
 import 'package:group_trip/features/chat/providers/chat_provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:group_trip/features/chat/data/chat_model.dart';
+// import 'package:group_trip/features/chat/data/chat_model.dart';
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
   final String chatId;
@@ -36,6 +37,29 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   void dispose() {
     _textController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final user = await ref.read(userFromStorageProvider.future);
+        final token = user?.accessToken ?? '';
+        if (token.isNotEmpty) {
+          print('🔗 Connecting to SignalR with token: $token');
+          await ref.read(signalRControllerProvider).connect(token);
+          ref.read(signalRControllerProvider).incoming.listen((msg) {
+            setState(() {
+              _messages.add(msg);
+            });
+          });
+        }
+      } catch (e) {
+        // ignore: avoid_print
+        print('⚠️ SignalR connect error: $e');
+      }
+    });
   }
 
 
@@ -92,7 +116,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
 
   Widget _buildNormalizedMessageWidget(ChatMessage m) {
-    final type =  m.messageType as String? ?? 'Text';
+    final type = m.messageType;
     final user = ref.read(userFromStorageProvider);
     final userID = user.asData?.value?.userId;
     final isMine = m.senderId == userID;
@@ -100,8 +124,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       // case 'date':
       //   return DateTitle(text: m. ?? '');
       case 'Normal':
-        if (isMine) return OutgoingText(message: m.content ?? '');
-        return IncomingText(name: m.senderName ?? 'Người gửi', message: m.content ?? '');
+        if (isMine) return OutgoingText(message: m.content);
+        return IncomingText(name: m.senderName.isNotEmpty ? m.senderName : 'Người gửi', message: m.content);
       case 'image':
         if (isMine) {
           return GestureDetector(
@@ -111,10 +135,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         }
         return GestureDetector(
           onTap: () => _openImagePreview(networkUrl: m.attachmentUrl, filePath: m.attachmentUrl),
-          child: IncomingImage(name: m.senderName ?? 'Người gửi', imageUrl: m.attachmentUrl ?? ''),
+          child: IncomingImage(name: m.senderName.isNotEmpty ? m.senderName : 'Người gửi', imageUrl: m.attachmentUrl),
         );
       case 'trip':
-        return IncomingTripCard(name: m.senderName ?? 'Người gửi');
+        return IncomingTripCard(name: m.senderName.isNotEmpty ? m.senderName : 'Người gửi');
       default:
         return const SizedBox.shrink();
     }
@@ -188,7 +212,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          chatDetail.chatMembers.length.toString() + " Thành viên" ?? "5 thành viên",
+                          (chatDetail?.chatMembers.length ?? 0).toString() + " Thành viên",
                           style: TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                       ],
@@ -303,9 +327,40 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                     radius: 22,
                     backgroundColor: Colors.blue,
                     child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: (){},
-                    ),
+                        icon: const Icon(Icons.send, color: Colors.white),
+                        onPressed: () async {
+                          final text = _textController.text.trim();
+                          final storedUser = await ref.read(userFromStorageProvider.future);
+                          final senderId = storedUser?.userId ?? '';
+
+                          if (_pickedImage != null) {
+                            final messageMap = {
+                              'content': '',
+                              'messageType': 'image',
+                              'attachmentUrl': _pickedImage!.path,
+                            };
+                            await ref.read(signalRControllerProvider).sendMessage(messageMap, senderId, widget.chatId);
+                            setState(() {
+                              _messages.add(ChatMessage(senderId: senderId, senderName: storedUser?.userName ?? '', content: '', attachmentUrl: _pickedImage!.path, messageType: 'image', userRead: []));
+                              _pickedImage = null;
+                            });
+                            _textController.clear();
+                            return;
+                          }
+
+                          if (text.isEmpty) return;
+                          final messageMap = {
+                            'content': text,
+                            'messageType': 'Normal',
+                            'attachmentUrl': '',
+                          };
+                          await ref.read(signalRControllerProvider).sendMessage(messageMap, senderId, widget.chatId);
+                          setState(() {
+                            _messages.add(ChatMessage(senderId: senderId, senderName: storedUser?.userName ?? '', content: text, attachmentUrl: '', messageType: 'Normal', userRead: []));
+                            _textController.clear();
+                          });
+                        },
+                      ),
                   )
                 ],
               ),

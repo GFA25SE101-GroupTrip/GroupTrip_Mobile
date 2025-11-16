@@ -42,28 +42,22 @@ class CustomBottomNavBar extends StatelessWidget {
             ),
             label: '',
           ),
+        
           BottomNavigationBarItem(
             icon: Icon(
-              currentIndex == 1 ? Icons.card_travel : Icons.card_travel_outlined,
-            ),
-            
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.chat_bubble_outline
+              currentIndex == 1 ? Icons.chat_bubble : Icons.chat_bubble_outline,
             ),
             label: '',
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              currentIndex == 3 ? Icons.favorite : Icons.favorite_border,
+              currentIndex == 2 ? Icons.favorite : Icons.favorite_border,
             ),
             label: '',
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              currentIndex == 4 ? Icons.person : Icons.account_circle_outlined,
+              currentIndex == 3 ? Icons.person : Icons.account_circle_outlined,
             ),
             label: '',
           ),

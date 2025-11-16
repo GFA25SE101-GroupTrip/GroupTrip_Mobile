@@ -97,10 +97,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: '/profile/help',
             builder: (context, state) => const HelpCenterScreen(),
       ),
-         GoRoute(
-            path: '/profile/help/detail',
-            builder: (context, state) => const ComplaintDetailScreen(),
-      ),
+        
       GoRoute(
         path: '/profile/help/submit',
         builder: (context, state) => const SubmitTicketScreen(),

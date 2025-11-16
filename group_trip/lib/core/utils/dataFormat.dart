@@ -7,6 +7,11 @@ String formatDateToDMY(DateTime date) {
   return formatter.format(date);
 }
 
+String formatDateToDMYString(String dateString) {
+  final date = DateTime.parse(dateString);
+  final formatter = DateFormat('dd/MM/yyyy');
+  return formatter.format(date);
+}
 String formatCurrency(double value) {
     if (value == 0) return "0đ";
     final str = value.toStringAsFixed(0);

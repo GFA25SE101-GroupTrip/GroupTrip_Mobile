@@ -26,7 +26,6 @@ class _MainLayoutState extends State<MainLayout> {
 
   final _pages = [
     const TripScreen(),
-    const TripScreen(),
     const ChatScreen(),
     const BlogScreen(),
     const ProfileScreen(),
