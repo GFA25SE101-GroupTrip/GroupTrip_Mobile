@@ -26,3 +26,28 @@ final checkContactExistsProvider =
     return false;
   }
 });
+
+
+final chatListViewProvider =
+    FutureProvider.autoDispose<dynamic>((ref) async {
+  final repo = ref.read(chatRepositoryProvider);
+  try {
+    final model = await repo.getChatList();
+    return model;
+  } catch (e) {
+    // Return null on error so UI can show a sensible fallback.
+    return null;
+  }
+});
+
+final chatDetailViewProvider =
+    FutureProvider.family.autoDispose<dynamic, String>((ref, chatId) async {
+  final repo = ref.read(chatRepositoryProvider);
+  try {
+    final model = await repo.getChatDetail(chatId);
+    return model;
+  } catch (e) {
+    // Return null on error so UI can show a sensible fallback.
+    return null;
+  }
+});

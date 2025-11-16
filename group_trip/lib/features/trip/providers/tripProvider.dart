@@ -24,3 +24,9 @@ final TripDetailModelProvider =
   final tripRepository = ref.watch(tripRepositoryProvider);
   return tripRepository.getTripById(tripId);
 });
+
+final JoinTripProvider =
+    FutureProvider.autoDispose.family<bool, String>((ref, tripDepartureId) async {
+  final tripRepository = ref.watch(tripRepositoryProvider);
+  return tripRepository.joinTrip(tripDepartureId);
+});

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/features/chat/presentation/chat_detail_screen.dart';
+import 'package:group_trip/features/chat/providers/chat_provider.dart';
+import 'package:group_trip/features/chat/data/chat_model.dart';
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({Key? key}) : super(key: key);
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen>
+class _ChatScreenState extends ConsumerState<ChatScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
@@ -47,6 +51,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    final chatListAsyncValue = ref.watch(chatListViewProvider);
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -97,8 +102,8 @@ class _ChatScreenState extends State<ChatScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildMessageList(type: "private"),
-                _buildMessageList(type: "trip"),
+                _buildMessageList(chatListAsyncValue, type: "private"),
+                _buildMessageList(chatListAsyncValue, type: "trip"),
 
               ],
             ),
@@ -107,131 +112,136 @@ class _ChatScreenState extends State<ChatScreen>
       ),
     );
   }
+  Widget _buildMessageList(AsyncValue<dynamic> chatListAsyncValue,
+      {String? type}) {
+    return chatListAsyncValue.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, st) => const Center(child: Text('Không thể tải danh sách tin nhắn')),
+      data: (data) {
+        // Normalize different payload shapes into a List<ChatModel>
+        final List<ChatModel> items = [];
 
-  Widget _buildMessageList({String? type}) {
-    final messages = [
-      {
-        "avatar": "https://i.pravatar.cc/150?img=1",
-        "name": "Hà Nội - Đà Nẵng",
-        "message": "Minh Tuấn: Chúng ta khởi hành lúc mấy giờ nhỉ?",
-        "time": "10:30",
-        "tag": "Chuyến đi",
-        "unread": false,
-      },
-      {
-        "avatar": "https://i.pravatar.cc/150?img=2",
-        "name": "Thu Hà",
-        "message": "Chị có rảnh tối nay không? Em muốn hỏi về...",
-        "time": "9:45",
-        "tag": "Riêng tư",
-        "unread": true,
-      },
-      {
-        "avatar": "https://i.pravatar.cc/150?img=3",
-        "name": "Khám Phá Sài Gòn",
-        "message": "Đức Anh: Cảm ơn mọi người đã có chuyến đi tuyệt vời!",
-        "time": "Hôm qua",
-        "tag": "Chuyến đi",
-        "unread": false,
-      },
-      {
-        "avatar": "https://i.pravatar.cc/150?img=4",
-        "name": "Hoàng Nam",
-        "message": "Anh ơi, địa điểm hẹn gặp ở đâu vậy?",
-        "time": "2 ngày",
-        "tag": "Riêng tư",
-        "unread": true,
-      },
-      {
-        "avatar": "https://i.pravatar.cc/150?img=5",
-        "name": "Phú Quốc 3 Ngày 2 Đêm",
-        "message": "Lan Anh: Mọi người đã book khách sạn chưa?",
-        "time": "3 ngày",
-        "tag": "Chuyến đi",
-        "unread": true,
-      },
-      {
-        "avatar": "https://i.pravatar.cc/150?img=6",
-        "name": "Mai Linh",
-        "message": "Cảm ơn bạn đã chia sẻ kinh nghiệm du lịch!",
-        "time": "1 tuần",
-        "tag": "Riêng tư",
-        "unread": false,
-      },
-    ];
+        if (data == null) {
+          // leave empty
+        } else if (data is ChatModel) {
+          items.add(data);
+        } else if (data is List) {
+          for (final e in data) {
+            if (e is ChatModel) {
+              items.add(e);
+            } else if (e is Map) {
+              try {
+                items.add(ChatModel.fromJson(Map<String, dynamic>.from(e)));
+              } catch (_) {
+                // skip invalid entries
+              }
+            }
+          }
+        } else if (data is Map) {
+          // wrapper { data: [...] } or single chat object
+          if (data.containsKey('data') && data['data'] is List) {
+            for (final e in data['data'] as List) {
+              if (e is Map) {
+                try {
+                  items.add(ChatModel.fromJson(Map<String, dynamic>.from(e)));
+                } catch (_) {}
+              }
+            }
+          } else {
+            try {
+              items.add(ChatModel.fromJson(Map<String, dynamic>.from(data)));
+            } catch (_) {}
+          }
+        } else {
+          // unknown shape: try to stringify into a single ChatModel
+          try {
+            items.add(ChatModel.fromJson({'title': data.toString(), 'id': ''}));
+          } catch (_) {}
+        }
 
-    // Lọc theo tab
-    final filtered =
-        type == null
-            ? messages
-            : messages
-                .where(
-                  (m) =>
-                      m["tag"] == (type == "trip" ? "Chuyến đi" : "Riêng tư"),
-                )
-                .toList();
+        if (items.isEmpty) return const Center(child: Text('Không có tin nhắn'));
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) {
-        final msg = filtered[index];
-        return _buildMessageCard(msg);
+        // Filter by tab: 'trip' = group chats, 'private' = non-group chats
+        final displayItems = type == 'trip'
+            ? items.where((c) => c.isGroup).toList()
+            : type == 'private'
+                ? items.where((c) => !c.isGroup).toList()
+                : items;
+
+        if (displayItems.isEmpty) return const Center(child: Text('Không có tin nhắn'));
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: displayItems.length,
+          itemBuilder: (context, index) {
+            final msg = displayItems[index];
+            return _buildMessageCard(msg);
+          },
+        );
       },
     );
   }
 
-  Widget _buildMessageCard(Map<String, dynamic> msg) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.12),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+
+
+  Widget _buildMessageCard(ChatModel msg) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatDetailScreen(chatId: msg.id,),
           ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        leading: CircleAvatar(
-          radius: 30,
-          backgroundImage: NetworkImage(msg["avatar"]),
-        ),
-        title: Text(
-          msg["name"],
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-        ),
-        subtitle: Text(
-          msg["message"],
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: Colors.grey[700], fontSize: 15),
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              msg["time"],
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
-            const SizedBox(height: 6),
-            if (msg["unread"])
-              Container(
-                height: 12,
-                width: 12,
-                decoration: const BoxDecoration(
-                  color: Colors.blueAccent,
-                  shape: BoxShape.circle,
-                ),
-              ),
           ],
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+          leading: CircleAvatar(
+            radius: 30,
+            backgroundImage: NetworkImage(msg.chatImg),
+          ),
+          title: Text(
+            msg.title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          ),
+          subtitle: Text(
+            msg.lastMessage ?? '',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.grey[700], fontSize: 15),
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              
+              const SizedBox(height: 6),
+              if (msg.unreadCount > 0)
+                Container(
+                  height: 12,
+                  width: 12,
+                  decoration: const BoxDecoration(
+                    color: Colors.blueAccent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

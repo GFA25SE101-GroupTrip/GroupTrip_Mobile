@@ -365,7 +365,7 @@ class RepresentativeDetail extends ConsumerWidget {
 
                         final preview = trips.take(3).toList();
                         return SizedBox(
-                          height: 180,
+                          height: 250,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: preview.length,

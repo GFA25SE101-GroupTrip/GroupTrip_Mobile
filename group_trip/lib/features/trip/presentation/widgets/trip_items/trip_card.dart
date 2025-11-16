@@ -110,10 +110,7 @@ class TripCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                ),
+              
                 const SizedBox(height: 6),
                 Row(
                   children: [

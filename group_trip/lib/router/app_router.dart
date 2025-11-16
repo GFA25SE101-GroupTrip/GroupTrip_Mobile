@@ -9,6 +9,7 @@ import 'package:group_trip/features/auth/presentation/screens/login_screen.dart'
 import 'package:group_trip/features/auth/presentation/screens/register_screen.dart';
 import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:group_trip/features/blog/presentation/blog_screen.dart';
+import 'package:group_trip/features/chat/presentation/chat_infor_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_detail_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_screen.dart';
@@ -74,6 +75,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           return RepresentativeDetail(id: id);
         },
       ),
+
+       GoRoute(
+            path: '/chat/info',
+            builder: (context, state) => const GroupInfoScreen(),
+          ),
       GoRoute(
             path: '/representative',
             builder: (context, state) => const TourListPage(),

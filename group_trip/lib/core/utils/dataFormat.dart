@@ -16,7 +16,6 @@ String formatCurrency(double value) {
     );
     return "$formattedđ";
 }
-
 String formatIntCurrency(int value) {
     if (value == 0) return "0đ";
     final str = value.toStringAsFixed(0);

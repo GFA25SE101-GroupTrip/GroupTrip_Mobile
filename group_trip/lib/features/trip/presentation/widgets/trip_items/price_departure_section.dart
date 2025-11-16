@@ -1,12 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/core/utils/dataFormat.dart';
+import 'package:group_trip/features/trip/presentation/widgets/process/joinTripPaymentSheet.dart';
+import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:group_trip/features/trip/data/trip_departure_model.dart';
 import 'package:group_trip/features/trip/data/trip_cost_range_model.dart';
+import 'package:group_trip/features/trip/presentation/widgets/process/deposit_paid/payment_sheet.dart'
+    as trip_sheet;
+import 'package:group_trip/features/wallet/presentation/widget/payment_sheet.dart'
+    as wallet_sheet;
 
-class PriceDepartureSection extends StatelessWidget {
+class PriceDepartureSection extends ConsumerWidget {
   final List<TripDeparture> tripDepartures;
+  final String tripImage;
+  final String tripTitle;
 
-  const PriceDepartureSection({super.key, required this.tripDepartures});
+  const PriceDepartureSection({
+    super.key,
+    required this.tripDepartures,
+    required this.tripImage,
+    required this.tripTitle,
+  });
 
   String _formatDateRange(DateTime start, DateTime end) {
     final formatter = DateFormat('dd/MM/yyyy');
@@ -32,8 +47,47 @@ class PriceDepartureSection extends StatelessWidget {
     return "${formatter.format(price)}đ";
   }
 
+  void _onSelectDeparture(
+    BuildContext context,
+    TripDeparture departure,
+    int intBalance,
+  ) {
+    if (departure.tripCostRanges.isEmpty) return;
+
+    final minRange = departure.tripCostRanges.reduce(
+      (a, b) => a.price < b.price ? a : b,
+    );
+
+    showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder:
+            (_) => trip_sheet.PaymentSheet(
+              tripImage: tripImage,
+              tripTitle: tripTitle,
+              tripDepartureDate: _formatDateRange(
+                departure.startDate,
+                departure.endDate,
+              ),
+              totalAmount: formatIntCurrency(minRange.price),
+              balance: formatIntCurrency(intBalance),
+              deposit: formatIntCurrency(minRange.price ~/ 2),
+              indebt: formatIntCurrency(minRange.price ~/ 2 - intBalance),
+              tripDepartureId: departure.id,
+              payAmount: minRange.price ~/ 2 - intBalance,
+            ),
+      );
+
+    print('minPrice: ${minRange.price} - User Balance: $intBalance');
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wallet = ref.watch(walletModelProvider);
+    final ballance = wallet.asData?.value?.balance ?? 0;
+    // parse ballance từ double sang int
+    final intBalance = ballance.toInt();
     if (tripDepartures.isEmpty) {
       return const Center(
         child: Text("Chưa có lịch khởi hành nào được công bố."),
@@ -45,8 +99,14 @@ class PriceDepartureSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...tripDepartures.map((departure) {
-          final dateText = _formatDateRange(departure.startDate, departure.endDate);
-          final weekdayText = _formatWeekdayRange(departure.startDate, departure.endDate);
+          final dateText = _formatDateRange(
+            departure.startDate,
+            departure.endDate,
+          );
+          final weekdayText = _formatWeekdayRange(
+            departure.startDate,
+            departure.endDate,
+          );
           final memberCount = departure.tripMembers.length;
           final costRanges = departure.tripCostRanges;
 
@@ -95,10 +155,7 @@ class PriceDepartureSection extends StatelessWidget {
                 // Dòng 2: Thứ
                 Text(
                   weekdayText,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                 ),
 
                 const SizedBox(height: 10),
@@ -114,36 +171,37 @@ class PriceDepartureSection extends StatelessWidget {
                 else
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: costRanges.map((range) {
-                      final priceText = _formatCurrency(range.price);
-                      final peopleRangeText =
-                          "Từ ${range.minTraveller} - ${range.maxTraveller} người";
+                    children:
+                        costRanges.map((range) {
+                          final priceText = _formatCurrency(range.price);
+                          final peopleRangeText =
+                              "Từ ${range.minTraveller} - ${range.maxTraveller} người";
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              peopleRangeText,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black87,
-                              ),
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  peopleRangeText,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                Text(
+                                  priceText,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF007AFF),
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              priceText,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF007AFF),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                          );
+                        }).toList(),
                   ),
 
                 const SizedBox(height: 12),
@@ -157,9 +215,9 @@ class PriceDepartureSection extends StatelessWidget {
                       ),
                       side: const BorderSide(color: Color(0xFF007AFF)),
                     ),
-                    onPressed: () {
-                      // TODO: xử lý chọn ngày khởi hành
-                    },
+                    onPressed:
+                        () =>
+                            _onSelectDeparture(context, departure, intBalance),
                     child: const Text(
                       "Chọn ngày này",
                       style: TextStyle(

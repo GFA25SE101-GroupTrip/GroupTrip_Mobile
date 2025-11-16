@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart' hide TabBar;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/features/trip/data/trip_rel_model.dart';
+import 'package:group_trip/features/trip/presentation/widgets/tab_bar_item.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/trip_tab_content.dart';
 import 'package:group_trip/features/trip/providers/tripProvider.dart';
 import 'trip_highlight_section.dart';
 import 'trip_join_button.dart';
-import '../tab_bar_item.dart';
+
 
 class TripDetailBody extends ConsumerStatefulWidget {
   final String tripId;
@@ -35,6 +36,7 @@ class _TripDetailBodyState extends ConsumerState<TripDetailBody> {
     'Lịch trình',
     'Giá & Khởi hành',
     'Quy định',
+    'Thư viện ảnh',
     'Review',
   ];
 
@@ -120,7 +122,7 @@ class _TripDetailBodyState extends ConsumerState<TripDetailBody> {
               const SizedBox(height: 24),
               TripHighlightSection(tags: TripdetailContentData.tripTagRelations),
               const SizedBox(height: 24),
-              const JoinTripButton(),
+              // const JoinTripButton(),
               const SizedBox(height: 24),
               TabBarItem(
                 tabs: _tabs,

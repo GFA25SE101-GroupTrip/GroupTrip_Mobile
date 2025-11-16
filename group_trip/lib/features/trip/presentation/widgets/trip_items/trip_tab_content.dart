@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:group_trip/features/trip/data/trip_rel_model.dart';
+import 'package:group_trip/features/trip/presentation/widgets/trip_items/image_section.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/policy_section.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/price_departure_section.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/review_section.dart';
@@ -36,10 +37,12 @@ class TripTabContent extends StatelessWidget {
       case 0:
         return ScheduleSection(trip: trip.tripSegments);
       case 1:
-        return PriceDepartureSection(tripDepartures: trip.tripDepartures);
+        return PriceDepartureSection(tripDepartures: trip.tripDepartures, tripImage: trip.tripImages.isNotEmpty ? trip.tripImages.first.imgUrl : '', tripTitle: trip.name);
       case 2:
         return PolicySection(trip: trip.tripRules!);
       case 3:
+        return ImageSection(images: trip.tripImages);
+      case 4:
         return ReviewSection(feedbacks: trip.tripFeedbacks);
       default:
         return const Padding(

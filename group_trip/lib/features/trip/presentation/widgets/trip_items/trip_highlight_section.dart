@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:group_trip/features/trip/data/trip_tag_relation.dart';
+import 'package:group_trip/shared/widgets/atoms/chip_tag.dart';
 
 class TripHighlightSection extends StatelessWidget {
   final List<TripTagRelation> tags;
@@ -12,11 +13,7 @@ class TripHighlightSection extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.star_rounded,
-            color: Color(0xFFFFA726),
-            size: 20,
-          ),
+          const Icon(Icons.star_rounded, color: Color(0xFFFFA726), size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -40,32 +37,10 @@ class TripHighlightSection extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Loại hình nổi bật',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-              color: Color(0xFF111827),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...tags.map((tag) => _buildHighlight(tag.name)).toList(),
-        ],
+      child: Wrap(
+        spacing: 8, // khoảng cách ngang giữa các chip
+        runSpacing: 8, // khoảng cách dọc giữa các dòng
+        children: [...tags.map((tag) => buildChip(tag.name)).toList()],
       ),
     );
   }

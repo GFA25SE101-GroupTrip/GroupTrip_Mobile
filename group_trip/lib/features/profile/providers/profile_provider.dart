@@ -5,6 +5,7 @@ import 'package:group_trip/features/auth/data/user_model.dart';
 import 'package:group_trip/features/profile/data/profile_api.dart';
 import 'package:group_trip/features/profile/data/profile_model.dart';
 import 'package:group_trip/features/profile/domain/profile_repository.dart';
+import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
 
 
 
@@ -265,6 +266,7 @@ class ProfileView {
 }
 
 final profileViewProvider = Provider<ProfileView?>((ref) {
+  final userWallet = ref.watch(walletModelProvider);
   final userAsync = ref.watch(userFromStorageProvider);
   final profileAsync = ref.watch(profileNotifierProvider);
   final userInfoAsync = ref.watch(userInformationNotifierProvider);

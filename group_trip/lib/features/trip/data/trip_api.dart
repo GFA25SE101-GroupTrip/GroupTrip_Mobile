@@ -51,4 +51,41 @@ class TripRemoteDataSource {
       throw Exception('Failed to load trip: status=${response.statusCode}');
     }
   }
+  // Tính năng join trip members
+  // https://gt-trip.grouptrip.site/api/trip-members?tripDepartureId=b65b86e1-fed0-4458-a2a7-2c7adbadb581
+  Future<bool> joinTrip(String tripDepartureId) async {
+    final endpoint =
+        '/api/trip-members';
+    final service = 'trip';
+
+    print('➡️ [TripAPI] POST $endpoint -> service=$service');
+
+    try {
+      final response = await apiClient.postWithParams(service, endpoint, 
+      queryParameters: {
+        'tripDepartureId': tripDepartureId,
+      });
+
+      print(
+        '⬅️ [TripAPI] Response ($service$endpoint) status=${response.statusCode}',
+      );
+      print('📦 Response data: ${response.data}');
+
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        print('✅ Successfully joined trip with ID: $tripDepartureId');
+        return true;
+      } else {
+        print('❌ HTTP error: status=${response.statusCode}');
+        throw Exception(
+          'Failed to join trip: status=${response.statusCode}',
+        );
+      }
+    } catch (e, stack) {
+      print('💥 [TripAPI] Exception while joining trip: $e');
+      print(stack);
+      return false;
+    }
+  }
 }

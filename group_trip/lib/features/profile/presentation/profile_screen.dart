@@ -193,8 +193,8 @@ class ProfileScreen extends ConsumerWidget {
               },
             ),
             _buildMenuItem(
-              icon: Icons.star_border,
-              title: "My Reviews",
+              icon: Icons.directions_car_filled,
+              title: "Custom Trips",
               subtitle: "Xem các đánh giá của bạn",
               onTap: () {
                 context.push('/profile/wallet');
