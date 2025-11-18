@@ -13,8 +13,11 @@ class ChatRepository {
     return remoteDataSource.getChatList();
   }
 
-  Future<ChatModel> getChatDetail(String chatId) {
-    return remoteDataSource.getChatDetail(chatId);
+  Future<ChatModel> getChatDetail(String chatId) async {
+    print('Fetching  Repository chat details for chatId: $chatId');
+    final result = await remoteDataSource.getChatDetail(chatId);
+    print('Fetched Repository chat details for chatId: $result');
+    return result;
   }
 
 }

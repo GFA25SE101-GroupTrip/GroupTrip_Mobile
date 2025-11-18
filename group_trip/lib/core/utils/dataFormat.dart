@@ -58,3 +58,19 @@ DateTime combineDate(DateTime date) {
       return '';
     }
   }
+
+
+String formatDateRange(String start, String end) {
+  try {
+    final startDate = DateTime.parse(start);
+    final endDate = DateTime.parse(end);
+
+    String s = "${startDate.day}/${startDate.month}/${startDate.year}";
+    String e = "${endDate.day}/${endDate.month}/${endDate.year}";
+
+    return "$s đến $e";
+
+  } catch (e) {
+    return "";
+  }
+}

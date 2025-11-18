@@ -108,12 +108,12 @@ class ComplaintDetailScreen extends ConsumerWidget {
                     children: [
                       // DetailRow(label: 'Loại:', value: report.type),
                       DetailRow(label: 'Gửi tới:', value: report.receiverName),
-                      if (report.createTime != null)
+                      if (report.createdTime != null)
                         DetailRow(
                           label: 'Ngày tạo:',
-                          value: report.createTime!,
+                          value: report.createdTime!,
                         ),
-                      // if (resp != null) DetailRow(label: 'Cập nhật:', value: resp.createTime),
+                      if (resp != null) DetailRow(label: 'Cập nhật:', value: resp.createTime),
                       const SizedBox(height: 10),
                       if (report.tripId != null || report.tripName != null)
                         Row(
@@ -197,6 +197,12 @@ class ComplaintDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
+                      Text(
+                        report.content,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                        ),
+                      ),
                       // The API may not include a separate description field; if it does, show it.
                       // For now use receiverName as fallback not needed; only show if present.
                       // If your ReportResponse has a dedicated content field, replace the following.
@@ -482,46 +488,17 @@ class ComplaintDetailScreen extends ConsumerWidget {
                                                 ),
                                               );
                                             }
-
-                                            // else if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.gif') || lower.endsWith('.webp')) {
-                                            //   await Navigator.of(context).push(MaterialPageRoute(
-                                            //     builder: (_) => Scaffold(
-                                            //       backgroundColor: Colors.black,
-                                            //       appBar: AppBar(backgroundColor: Colors.black, leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop())),
-                                            //       body: Center(
-                                            //         child: InteractiveViewer(
-                                            //           child: Image.network(a, fit: BoxFit.contain),
-                                            //         ),
-                                            //       ),
-                                            //     ),
-                                            //   ));
-                                            // }
-                                            // else {
-                                            //   final uri = Uri.parse(a);
-                                            //   await Navigator.of(context).push(MaterialPageRoute(
-                                            //     fullscreenDialog: true,
-                                            //     builder: (_) => Scaffold(
-                                            //       appBar: AppBar(
-                                            //         title: const Text('Mở tệp đính kèm'),
-                                            //         leading: IconButton(
-                                            //           icon: const Icon(Icons.close),
-                                            //           onPressed: () => Navigator.of(context).pop(),
-                                            //         ),
-                                            //       ),
-                                            //       body: WebViewWidget(
-                                            //         controller: WebViewController()
-                                            //           ..setJavaScriptMode(JavaScriptMode.unrestricted)
-                                            //           ..loadRequest(uri),
-                                            //       ),
-                                            //     ),
-                                            //   ));
-                                            // }
                                           },
-                                          child: FileChip(
-                                            name: a,
-                                            size: '',
-                                            icon: Icons.attach_file,
-                                            color: Colors.blue,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            child: Image.network(
+                                              a,
+                                              width: 120, // kích thước ảnh nhỏ
+                                              height: 120,
+                                              fit: BoxFit.cover,
+                                            ),
                                           ),
                                         );
                                       }).toList(),
@@ -538,6 +515,7 @@ class ComplaintDetailScreen extends ConsumerWidget {
                               size: 18,
                             ),
                             const SizedBox(width: 6),
+
                             Text(
                               'Khiếu nại đã được xử lý',
                               style: GoogleFonts.inter(

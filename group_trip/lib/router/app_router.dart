@@ -11,6 +11,7 @@ import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:group_trip/features/blog/presentation/blog_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_infor_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_screen.dart';
+import 'package:group_trip/features/mytrip/presentation/mytrip.dart';
 import 'package:group_trip/features/profile/presentation/profile_detail_screen.dart';
 import 'package:group_trip/features/profile/presentation/profile_screen.dart';
 import 'package:group_trip/features/report/presentation/complaint_detail_screen.dart';
@@ -105,6 +106,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/mytrip',
+        builder: (context, state) => const MyTripsScreen(),
       ),
       GoRoute(
         path: '/signup',

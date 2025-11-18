@@ -7,7 +7,7 @@ class ChatModel {
   final bool isGroup;
   final String chatImg;
   final int unreadCount;
-  final String ? lastMessage;
+  final String? lastMessage;
   final List<ChatMember>? chatMembers;
   final List<ChatMessage> messages;
   ChatModel({
@@ -106,5 +106,27 @@ class ChatModel {
       'chatMembers': chatMembers,
       'messages': messages,
     };
+  }
+
+  ChatModel copyWith({
+    String? id,
+    String? title,
+    bool? isGroup,
+    String? chatImg,
+    int? unreadCount,
+    String? lastMessage,
+    List<ChatMember>? chatMembers,
+    List<ChatMessage>? messages,
+  }) {
+    return ChatModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      isGroup: isGroup ?? this.isGroup,
+      chatImg: chatImg ?? this.chatImg,
+      unreadCount: unreadCount ?? this.unreadCount,
+      lastMessage: lastMessage ?? this.lastMessage,
+      chatMembers: chatMembers ?? this.chatMembers,
+      messages: messages ?? this.messages,
+    );
   }
 }

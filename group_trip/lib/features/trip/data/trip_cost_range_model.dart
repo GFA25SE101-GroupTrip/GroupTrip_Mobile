@@ -1,10 +1,8 @@
 class TripCostRange {
-  final String id; 
   final int minTraveller;
   final int maxTraveller;
   final int price;
   TripCostRange({
-    required this.id,
     required this.minTraveller,
     required this.maxTraveller,
     required this.price,
@@ -22,7 +20,6 @@ class TripCostRange {
     }
 
     return TripCostRange(
-      id: json['id'],
       minTraveller: _parseInt(json['minTraveller']),
       maxTraveller: _parseInt(json['maxTraveller']),
       price: _parseInt(json['price']),
@@ -30,7 +27,6 @@ class TripCostRange {
 
   }
   Map<String, dynamic> toJson() => {
-        'id': id,
         'minTraveller': minTraveller,
         'maxTraveller': maxTraveller,
         'price': price,

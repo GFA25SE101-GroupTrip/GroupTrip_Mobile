@@ -5,6 +5,7 @@ class ReportModel {
   final String userId;
   final String targetId;
   final String title;
+  final String assignToRole;
   final String status;
   final String? receiverName;
   final String? tripId;
@@ -15,6 +16,7 @@ class ReportModel {
     required this.userId,
     required this.targetId,
     required this.title,
+    required this.assignToRole,
     required this.status,
     required this.receiverName,
     this.tripId,
@@ -26,6 +28,7 @@ class ReportModel {
       id: json['id'] as String,
       userId: json['userId'] as String,
       targetId: json['targetId'] as String,
+      assignToRole: json['assignToRole'] as String,
       title: json['title'] as String,
       status: json['status'] as String,
       receiverName: json['receiverName'] as String,
@@ -41,6 +44,7 @@ class ReportModel {
       'targetId': targetId,
       'title': title,
       'status': status,
+      'assignToRole': assignToRole,
       'receiverName': receiverName,
       'tripId': tripId,
       'tripName': tripName,

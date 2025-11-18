@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/core/providers/api_client_provider.dart';
+import 'package:group_trip/features/report/data/create_report_model.dart';
 import 'package:group_trip/features/report/data/report_api.dart';
 import 'package:group_trip/features/report/data/report_model.dart';
 import 'package:group_trip/features/report/data/report_response.dart';
@@ -24,4 +25,11 @@ final reportDetailProvider =
     FutureProvider.family<ReportResponse, String>((ref, reportID) async {
   final repository = ref.read(reportRepositoryProvider);
   return repository.getReportDetail(reportID);
+});
+
+// Provider để submit báo cáo
+final submitReportProvider =
+    FutureProvider.family<void, CreateReportModel>((ref, report) async {
+  final repository = ref.read(reportRepositoryProvider);
+  return repository.submitReport(report);
 });

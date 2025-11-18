@@ -1,18 +1,18 @@
 class TripMember {
-  final String? id;
-  final String? name;
+  final String? memberId;
+  final String? imageUrl;
 
-  TripMember({this.id, this.name});
+  TripMember({this.memberId, this.imageUrl});
 
   factory TripMember.fromJson(Map<String, dynamic> json) {
     return TripMember(
-      id: json['id'],
-      name: json['name'],
+      memberId: json['memberId'],
+      imageUrl: json['imageUrl'],
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
+        'memberId': memberId,
+        'imageUrl': imageUrl,
       };
 }

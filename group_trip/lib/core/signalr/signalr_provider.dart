@@ -8,78 +8,125 @@ import 'package:signalr_netcore/hub_connection.dart';
 class SignalRController {
   final Ref ref;
   final SignalRService _svc = SignalRService();
-  final StreamController<ChatMessage> _incoming = StreamController.broadcast();
 
-  Stream<ChatMessage> get incoming => _incoming.stream;
+  // Thay vì 1 stream chung → dùng map để mỗi chat có stream riêng
+  final Map<String, StreamController<ChatMessage>> _chatMessageControllers = {};
 
   SignalRController(this.ref);
 
   bool _connected = false;
   bool _isConnecting = false;
-  bool _handlersAttached = false; // 👈 Thêm cờ để chỉ attach handler 1 lần
+  bool _handlersAttached = false;
+
+  // Public: lấy stream cho từng chat riêng biệt
+  Stream<ChatMessage> messagesStream(String chatId) {
+    return _chatMessageControllers.putIfAbsent(
+      chatId,
+      () => StreamController<ChatMessage>.broadcast(),
+    ).stream;
+  }
 
   Future<void> connect(String token) async {
     if (_connected || _isConnecting) return;
 
-    print("🔗 SignalR connecting...");
+    print("SignalR connecting...");
     _isConnecting = true;
 
     try {
       await _svc.initConnection(token);
       _connected = true;
+      print("SignalR connected signalR provider");
 
-      print("✅ SignalR connected");
-
-      // attach handler đúng 1 lần duy nhất
-      _attachHandlers();
+      _attachHandlersOnce();
     } catch (e) {
-      print("❌ SignalR connect error: $e");
+      print("SignalR connect error: $e");
       rethrow;
     } finally {
       _isConnecting = false;
     }
   }
 
-  void _attachHandlers() {
-    if (_handlersAttached) return; // Không attach trùng
-
+  void _attachHandlersOnce() {
+    if (_handlersAttached) return;
     _handlersAttached = true;
 
+    // ReceiveMessage: (senderId, content, chatId)
     _svc.connection!.on("ReceiveMessage", (args) {
+      if (args == null || args.length < 3) {
+        print("ReceiveMessage: args không đủ → $args");
+        return;
+      }
+
       try {
-        final senderId = args != null && args.isNotEmpty ? args[0] as String? : null;
-        final rawContent = args != null && args.length > 1 ? args[1] : null;
+        final senderId = args[0].toString();
+        final rawContent = args[1];
+        final chatId = args[2].toString();
+
+        // Lấy user hiện tại để biết tin của mình hay người khác
+        final currentUserId = ref.read(userFromStorageProvider)?.value?.userId;
 
         String content = '';
         String attachmentUrl = '';
         String messageType = 'Normal';
 
-        if (rawContent is Map) {
+        if (rawContent is Map<String, dynamic>) {
           content = rawContent['content']?.toString() ?? '';
           attachmentUrl = rawContent['attachmentUrl']?.toString() ?? '';
           messageType = rawContent['messageType']?.toString() ?? 'Normal';
-        } else if (rawContent != null) {
-          content = rawContent.toString();
+        } else if (rawContent is String) {
+          content = rawContent;
         }
 
-        _incoming.add(ChatMessage(
-          senderId: senderId ?? '',
-          senderName: '',
+        // Tạo ID tạm (rất quan trọng để Riverpod rebuild)
+        final tempId = DateTime.now().millisecondsSinceEpoch.toString();
+        print("ReceiveMessage: chatId=$chatId, senderId=$senderId, content=$content, tempID =$tempId");
+
+        final message = ChatMessage(
+          id: tempId, // bắt buộc có id
+          chatId: chatId,
+          senderId: senderId,
+          senderName: 'Đang tải...',
           content: content,
           attachmentUrl: attachmentUrl,
           messageType: messageType,
+          createdTime: DateTime.now().toUtc().toIso8601String(),
+          isMine: senderId == currentUserId, // quan trọng cho UI
           userRead: [],
-        ));
-      } catch (e) {
-        print('⚠️ SignalR receive parsing error: $e');
+        );
+
+        // Phát vào đúng stream của chat đó → UI rebuild ngay lập tức
+        _chatMessageControllers.putIfAbsent(
+          chatId,
+          () => StreamController<ChatMessage>.broadcast(),
+        ).add(message);
+
+        print("Tin nhắn mới → Chat: $chatId | Từ: $senderId | Mình: ${message.isMine}");
+      } catch (e, s) {
+        print("Lỗi parse ReceiveMessage: $e\n$s");
       }
     });
 
+    // Đã xem
     _svc.connection!.on("MessagesMarkedAsRead", (args) {
-      print("👁 Read message event: $args");
+      if (args == null || args.length < 2) return;
+      final chatId = args[0].toString();
+      final userId = args[1].toString();
+
+      // Gửi event đặc biệt để ChatScreen xử lý "seen"
+      final event = ChatMessage.markAsRead(
+        chatId: chatId,
+        userId: userId,
+      );
+
+      _chatMessageControllers.putIfAbsent(
+        chatId,
+        () => StreamController<ChatMessage>.broadcast(),
+      ).add(event);
+
+      print("Đã xem → Chat: $chatId | User: $userId");
     });
 
-    print("📌 Handlers attached");
+    print("SignalR handlers attached");
   }
 
   Future<void> sendMessage(
@@ -90,10 +137,9 @@ class SignalRController {
     try {
       final user = await ref.read(userFromStorageProvider.future);
       final token = user?.accessToken ?? '';
-
       await _svc.sendMessage(message, senderId, chatId, token);
     } catch (e) {
-      print("⚠️ SignalR send failed: $e");
+      print("Send message failed: $e");
       rethrow;
     }
   }
@@ -103,21 +149,18 @@ class SignalRController {
   }
 
   Future<void> dispose() async {
-    try {
-      final state = _svc.connection!.state;
-      if (state == HubConnectionState.Connected ||
-          state == HubConnectionState.Reconnecting) {
-        await _svc.connection!.stop();
-      }
-    } catch (_) {}
+    await Future.wait(_chatMessageControllers.values.map((c) => c.close()));
+    _chatMessageControllers.clear();
 
-    await _incoming.close();
+    if (_svc.connection?.state == HubConnectionState.Connected) {
+      await _svc.connection?.stop();
+    }
   }
 }
 
+// Provider
 final signalRControllerProvider = Provider<SignalRController>((ref) {
-  final ctrl = SignalRController(ref);
-  ref.onDispose(ctrl.dispose);
-  return ctrl;
+  final controller = SignalRController(ref);
+  ref.onDispose(controller.dispose);
+  return controller;
 });
-

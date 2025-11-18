@@ -4,8 +4,9 @@ class IncomingText extends StatelessWidget {
   final String name;
   final String message;
   final String? time;
+  final String avatar;
 
-  const IncomingText({super.key, required this.name, required this.message, this.time});
+  const IncomingText({super.key, required this.name, required this.message, this.time, required this.avatar});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +15,7 @@ class IncomingText extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(backgroundImage: NetworkImage("https://i.pravatar.cc/150?u=$name")),
+          CircleAvatar(backgroundImage: NetworkImage(avatar)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(

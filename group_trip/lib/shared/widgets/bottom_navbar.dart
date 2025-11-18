@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final int chatUnreadCount;
 
   const CustomBottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.chatUnreadCount = 0,
   });
 
   @override
@@ -44,8 +46,27 @@ class CustomBottomNavBar extends StatelessWidget {
           ),
         
           BottomNavigationBarItem(
-            icon: Icon(
-              currentIndex == 1 ? Icons.chat_bubble : Icons.chat_bubble_outline,
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(currentIndex == 1 ? Icons.chat_bubble : Icons.chat_bubble_outline),
+                if (chatUnreadCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(10)),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Center(
+                        child: Text(
+                          chatUnreadCount > 9 ? '9+' : chatUnreadCount.toString(),
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             label: '',
           ),

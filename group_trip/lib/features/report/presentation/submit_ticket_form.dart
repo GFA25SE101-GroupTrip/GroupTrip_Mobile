@@ -23,7 +23,10 @@ class _SubmitTicketScreenState extends State<SubmitTicketScreen> {
   XFile? attachedImage;
   File? attachedFile;
 
-  final List<String> adminTypes = ['Refund', 'Support'];
+  final List<String> adminTypes = [ 'Refund',
+    'Complain',
+    'Support',
+    'WithDraw'];
   final List<String> representativeTypes = ['Trip Issue', 'Other'];
   final List<String> trips = ['Đà Lạt', 'Sa Pa', 'Phú Quốc'];
 

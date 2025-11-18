@@ -57,9 +57,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-      
+
         centerTitle: true,
-        
+
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(26),
           child: Padding(
@@ -69,23 +69,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 width: MediaQuery.of(context).size.width * 0.7,
                 child: Container(
                   padding: const EdgeInsets.all(2),
-                 
+
                   child: TabBar(
                     controller: _tabController,
                     indicator: BoxDecoration(
                       color: const Color.fromARGB(255, 63, 101, 161),
                     ),
                     indicatorSize: TabBarIndicatorSize.tab,
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                    labelPadding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 2,
+                    ),
                     labelColor: Colors.white,
-                    unselectedLabelColor: const Color.fromARGB(255, 76, 113, 173),
-                    labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                    unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                    tabs: const [
-                      Tab(text: "Riêng tư"),
-                      Tab(text: "Chuyến đi"),
-
-                    ],
+                    unselectedLabelColor: const Color.fromARGB(
+                      255,
+                      76,
+                      113,
+                      173,
+                    ),
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    tabs: const [Tab(text: "Riêng tư"), Tab(text: "Chuyến đi")],
                   ),
                 ),
               ),
@@ -104,7 +114,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               children: [
                 _buildMessageList(chatListAsyncValue, type: "private"),
                 _buildMessageList(chatListAsyncValue, type: "trip"),
-
               ],
             ),
           ),
@@ -112,11 +121,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       ),
     );
   }
-  Widget _buildMessageList(AsyncValue<dynamic> chatListAsyncValue,
-      {String? type}) {
+
+  Widget _buildMessageList(
+    AsyncValue<dynamic> chatListAsyncValue, {
+    String? type,
+  }) {
     return chatListAsyncValue.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, st) => const Center(child: Text('Không thể tải danh sách tin nhắn')),
+      error:
+          (err, st) =>
+              const Center(child: Text('Không thể tải danh sách tin nhắn')),
       data: (data) {
         // Normalize different payload shapes into a List<ChatModel>
         final List<ChatModel> items = [];
@@ -159,16 +173,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           } catch (_) {}
         }
 
-        if (items.isEmpty) return const Center(child: Text('Không có tin nhắn'));
+        if (items.isEmpty)
+          return const Center(child: Text('Không có tin nhắn'));
 
         // Filter by tab: 'trip' = group chats, 'private' = non-group chats
-        final displayItems = type == 'trip'
-            ? items.where((c) => c.isGroup).toList()
-            : type == 'private'
+        final displayItems =
+            type == 'trip'
+                ? items.where((c) => c.isGroup).toList()
+                : type == 'private'
                 ? items.where((c) => !c.isGroup).toList()
                 : items;
 
-        if (displayItems.isEmpty) return const Center(child: Text('Không có tin nhắn'));
+        if (displayItems.isEmpty)
+          return const Center(child: Text('Không có tin nhắn'));
 
         return ListView.builder(
           padding: const EdgeInsets.all(12),
@@ -182,15 +199,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
   }
 
-
-
   Widget _buildMessageCard(ChatModel msg) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ChatDetailScreen(chatId: msg.id,),
+            builder: (context) => ChatDetailScreen(chatId: msg.id),
           ),
         );
       },
@@ -226,22 +241,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: Colors.grey[700], fontSize: 15),
           ),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              
-              const SizedBox(height: 6),
-              if (msg.unreadCount > 0)
-                Container(
-                  height: 12,
-                  width: 12,
-                  decoration: const BoxDecoration(
-                    color: Colors.blueAccent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-            ],
-          ),
+          trailing:
+              msg.unreadCount > 0
+                  ? Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      msg.unreadCount > 99 ? '99+' : msg.unreadCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                  : const SizedBox.shrink(),
         ),
       ),
     );

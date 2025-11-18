@@ -17,7 +17,9 @@ class ChatMember {
       travellerName: json['travellerName'] as String,
       imgUrl: json['img_url'] as String,
       roleInTrip: json['roleInTrip'] as String,
-      joinAt: DateTime.parse(json['joinAt'] as String),
+      joinAt: DateTime.parse(json['joinAt'] as String
+      
+      ),
     );
   }
   Map <String, dynamic> toJson() {
