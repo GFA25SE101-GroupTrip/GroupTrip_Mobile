@@ -130,7 +130,7 @@ class _BlogSearchScreenState extends ConsumerState<BlogSearchScreen> {
                         );
                       },
                       child: _buildPostCard(
-                        imageUrl: b.coverImage ?? 'https://picsum.photos/seed/1/800/400',
+                        imageUrl: b.coverImage ?? 'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg1/800/400',
                         title: b.title,
                         author: b.fullName,
                         authorAvatarUrl: b.userImage,

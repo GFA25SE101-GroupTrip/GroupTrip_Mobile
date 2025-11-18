@@ -104,7 +104,7 @@ class BlogCard extends StatelessWidget {
         fit: BoxFit.cover,
         errorBuilder: (context, error, stack) {
           return Image.network(
-            'https://picsum.photos/seed/$seed/800/400',
+            'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg',
             height: 180,
             width: double.infinity,
             fit: BoxFit.cover,
@@ -114,7 +114,7 @@ class BlogCard extends StatelessWidget {
     }
 
     return Image.network(
-      'https://picsum.photos/seed/$seed/800/400',
+      'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg',
       height: 180,
       width: double.infinity,
       fit: BoxFit.cover,

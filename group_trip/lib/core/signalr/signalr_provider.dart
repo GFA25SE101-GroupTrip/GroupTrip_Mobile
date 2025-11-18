@@ -26,13 +26,17 @@ class SignalRController {
     ).stream;
   }
 
-  Future<void> connect(String token) async {
+  Future<void> connect(String token, chatIds) async {
     if (_connected || _isConnecting) return;
 
     print("SignalR connecting...");
     _isConnecting = true;
 
     try {
+      // if caller provides a list of chatIds, set them first so initConnection can join
+      if (chatIds != null) {
+        _svc.setChatIds(chatIds);
+      }
       await _svc.initConnection(token);
       _connected = true;
       print("SignalR connected signalR provider");
@@ -63,7 +67,7 @@ class SignalRController {
         final chatId = args[2].toString();
 
         // Lấy user hiện tại để biết tin của mình hay người khác
-        final currentUserId = ref.read(userFromStorageProvider)?.value?.userId;
+        final currentUserId = ref.read(userFromStorageProvider).asData?.value?.userId;
 
         String content = '';
         String attachmentUrl = '';
@@ -144,9 +148,13 @@ class SignalRController {
     }
   }
 
-  Future<void> markRead(String chatId, String userId) async {
-    await _svc.markRead(chatId, userId);
+  /// Replace the list of chat IDs the user is a member of. If already connected,
+  /// the service will join those groups immediately.
+  void setChatIds(List<String> ids) {
+    _svc.setChatIds(ids);
   }
+
+
 
   Future<void> dispose() async {
     await Future.wait(_chatMessageControllers.values.map((c) => c.close()));

@@ -74,3 +74,37 @@ String formatDateRange(String start, String end) {
     return "";
   }
 }
+
+
+String FormatMessageTime(String isoTime) {
+  try {
+    final dateTime = DateTime.parse(isoTime);
+    final now = DateTime.now();
+    final localTime = dateTime.toLocal();
+    
+    // Nếu là hôm nay
+    if (localTime.year == now.year && 
+        localTime.month == now.month && 
+        localTime.day == now.day) {
+      return DateFormat('HH:mm').format(localTime);
+    }
+    
+    // Nếu là hôm qua
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (localTime.year == yesterday.year && 
+        localTime.month == yesterday.month && 
+        localTime.day == yesterday.day) {
+      return 'Hôm qua ${DateFormat('HH:mm').format(localTime)}';
+    }
+    
+    // Nếu là năm nay
+    if (localTime.year == now.year) {
+      return DateFormat('dd/MM HH:mm').format(localTime);
+    }
+    
+    // Khác năm
+    return DateFormat('dd/MM/yyyy HH:mm').format(localTime);
+  } catch (e) {
+    return '';
+  }
+}

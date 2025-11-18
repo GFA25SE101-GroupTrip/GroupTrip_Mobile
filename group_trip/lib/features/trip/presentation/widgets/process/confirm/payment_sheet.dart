@@ -47,7 +47,7 @@ class _PaymentSheetState extends State<PaymentSheet> {
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(
-                                'https://picsum.photos/seed/2/800/400',
+                                'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg2/800/400',
                                 width: 60,
                                 height: 60,
                                 fit: BoxFit.cover,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
 import 'package:group_trip/core/signalr/signalr_provider.dart';
+import 'package:group_trip/core/utils/dataFormat.dart';
 import 'package:group_trip/features/chat/data/chat_message.dart';
 import 'package:group_trip/features/chat/presentation/widgets/incomingImage.dart';
 import 'package:group_trip/features/chat/presentation/widgets/incomingText.dart';
@@ -11,7 +12,6 @@ import 'package:group_trip/features/chat/presentation/widgets/incomingTripCard.d
 import 'package:group_trip/features/chat/presentation/widgets/outgoindImage.dart';
 import 'package:group_trip/features/chat/presentation/widgets/outgoingText.dart';
 import 'package:group_trip/features/chat/providers/chat_provider.dart';
-import 'package:group_trip/features/chat/providers/signalr_message_provider.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
@@ -51,7 +51,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       final user = await ref.read(userFromStorageProvider.future);
       final token = user?.accessToken;
       if (token != null && token.isNotEmpty) {
-        await ref.read(signalRControllerProvider).connect(token);
+        await ref.read(signalRControllerProvider).connect(token, widget.chatId);
       }
     } catch (e) {
       print('SignalR connect error: $e');
@@ -87,27 +87,20 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     ).then((_) => setState(() {})); // fix lỗi hình bị mờ khi quay lại
   }
 
-  // Scroll thông minh 100%
-  void _scrollToBottom({bool animate = true}) {
-    if (!_scrollController.hasClients) return;
+ void _scrollToBottom({bool animate = true}) {
+  if (!_scrollController.hasClients) return;
 
-    final extra =
-        MediaQuery.of(context).viewInsets.bottom +
-        (_inputBarKey.currentContext?.size?.height ?? 100) +
-        120;
-
-    final target = _scrollController.position.maxScrollExtent + extra;
-
-    if (animate) {
-      _scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    } else {
-      _scrollController.jumpTo(target);
-    }
+  // Với reverse: true → scroll về 0 là xuống dưới cùng
+  if (animate) {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  } else {
+    _scrollController.jumpTo(0);
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -115,20 +108,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final currentUserId =
         ref.watch(userFromStorageProvider).asData?.value?.userId;
 
-    // SỬA CHỖ NÀY: Dùng provider bọc stream → không lỗi nữa!
-    // ĐÚNG – StreamProvider phát ChatMessage → listen kiểu ChatMessage
-    // ĐƠN GIẢN, KHÔNG LỖI, CHẠY NGON 100%
-    ref.watch(signalRMessageProvider(widget.chatId)).whenData((message) {
-      if (message.isMarkAsReadEvent) return;
-
-      ref
-          .read(chatDetailProvider(widget.chatId).notifier)
-          .addMessageLocally(message);
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
-      });
-    });
+    // Incoming SignalR messages are handled by ChatDetailNotifier (it listens to the
+    // SignalR controller stream). Do not duplicate handling here to avoid
+    // duplicate message inserts.
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -139,18 +121,14 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           data:
               (chat) => Row(
                 children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      chat.chatImg ?? "https://i.pravatar.cc/150",
-                    ),
-                  ),
+                  CircleAvatar(backgroundImage: NetworkImage(chat.chatImg)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          chat.title ?? "Chat",
+                          chat.title,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -187,19 +165,17 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                     messages.isEmpty
                         ? const Center(child: Text("Chưa có tin nhắn"))
                         : ListView.builder(
-                          key: ValueKey(
-                            messages.length,
-                          ), // ép rebuild khi có tin mới
                           controller: _scrollController,
                           padding: const EdgeInsets.only(
                             left: 16,
                             right: 16,
                             top: 16,
-                            bottom: 100,
+                            bottom: 100, // để chừa chỗ cho input bar + keyboard
                           ),
                           itemCount: messages.length,
-                          itemBuilder: (context, i) {
-                            final m = messages[i];
+                          itemBuilder: (context, index) {
+                            // Vì reverse: true → index 0 là tin nhắn mới nhất
+                            final m = messages[index];
                             final isMine = m.senderId == currentUserId;
 
                             return _buildMessageWidget(m, isMine, chat.chatImg);
@@ -215,6 +191,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   Widget _buildMessageWidget(ChatMessage m, bool isMine, String? groupAvatar) {
+    final formattedTime = FormatMessageTime(m.createdTime);
     switch (m.messageType) {
       case 'image':
         return GestureDetector(
@@ -225,22 +202,24 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               ),
           child:
               isMine
-                  ? OutgoingImage(filePath: m.attachmentUrl)
+                  ? OutgoingImage(filePath: m.attachmentUrl, time: formattedTime)
                   : IncomingImage(
                     name: m.senderName.isNotEmpty ? m.senderName : 'Người gửi',
                     imageUrl: m.attachmentUrl,
+                    time: formattedTime,
                   ),
         );
 
       case 'Normal':
       default:
         return isMine
-            ? OutgoingText(message: m.content)
+            ? OutgoingText(message: m.content, time: formattedTime,)
             : IncomingText(
               avatar:
                   groupAvatar ?? "https://i.pravatar.cc/150?u=${m.senderId}",
               name: m.senderName.isNotEmpty ? m.senderName : 'Người gửi',
               message: m.content,
+              time: formattedTime,
             );
     }
   }
@@ -382,6 +361,6 @@ class _KeyboardObserver extends WidgetsBindingObserver {
 
   @override
   void didChangeMetrics() {
-    Future.delayed(const Duration(milliseconds: 100), state._scrollToBottom);
-  }
+    Future.delayed(const Duration(milliseconds: 100), () => state._scrollToBottom());  
+}
 }

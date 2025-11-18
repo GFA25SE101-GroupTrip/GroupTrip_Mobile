@@ -50,7 +50,7 @@ class BlogDetailScreen extends ConsumerWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                blog.coverImage ?? 'https://picsum.photos/seed/2/800/400',
+                blog.coverImage ?? 'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg2/800/400',
                 fit: BoxFit.cover,
               ),
             ),
@@ -156,12 +156,12 @@ class BlogDetailScreen extends ConsumerWidget {
             const SizedBox(height: 14),
             _relatedPost(
               "Hội An – Thành phố cổ kính trong ánh hoàng hôn",
-              "https://picsum.photos/600/300?1",
+              "https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg",
             ),
             const SizedBox(height: 14),
             _relatedPost(
               "Khám phá ẩm thực Phú Yên, vùng đất đầy hương vị biển cả",
-              "https://picsum.photos/600/300?2",
+              "https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg",
             ),
              const SizedBox(height: 14),
 

@@ -115,7 +115,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                       else
                         ...trips.map((trip) {
                           // map TripModel (relational) -> UI TripCard fields
-                          final imageUrl = trip.tripImages.isNotEmpty ? trip.tripImages.first.imgUrl : 'https://picsum.photos/seed/${trip.id}/800/400';
+                          final imageUrl = trip.tripImages.isNotEmpty ? trip.tripImages.first.imgUrl : 'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg';
                           final label = trip.status.toString().toUpperCase();
                           final title = trip.name;
                           final description = trip.description;

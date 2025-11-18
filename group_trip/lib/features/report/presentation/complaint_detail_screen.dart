@@ -13,6 +13,35 @@ class ComplaintDetailScreen extends ConsumerWidget {
   final String reportId;
   const ComplaintDetailScreen({super.key, required this.reportId});
 
+  String _statusToVietnamese(String status) {
+    final s = status.trim().toLowerCase();
+    switch (s) {
+      case 'pending':
+        return 'Đang chờ';
+      case 'processing':
+        return 'Đang xử lý';
+      case 'completed':
+        return 'Đã hoàn thành';
+      case 'cancelled':
+        return 'Đã Hủy';
+      default:
+        return status.isNotEmpty ? status : 'Đang chờ xử lý';
+    }
+  }
+
+  /// Helper to pick icon and color for a given status key
+  Map<String, dynamic> _statusIconAndColor(String status) {
+    final s = status.trim().toLowerCase();
+    if (s == 'completed') {
+      return {'icon': Icons.check_circle, 'color': Colors.green[700]};
+    }
+    if (s == 'cancelled') {
+      return {'icon': Icons.cancel, 'color': Colors.red[700]};
+    }
+    // pending / processing / default
+    return {'icon': Icons.hourglass_top, 'color': Colors.amber[800]};
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.watch(reportDetailProvider(reportId));
@@ -51,12 +80,35 @@ class ComplaintDetailScreen extends ConsumerWidget {
               icon: const Icon(Icons.arrow_back, color: Colors.black),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text(
-              report.title.isNotEmpty ? report.title : 'Complaint',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  report.title.isNotEmpty ? report.title : 'Complaint',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      _statusIconAndColor(report.status)['icon'] as IconData,
+                      size: 14,
+                      color: _statusIconAndColor(report.status)['color'] as Color?,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _statusToVietnamese(report.status),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: (_statusIconAndColor(report.status)['color'] as Color?) ?? Colors.amber[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             actions: const [
               Padding(
@@ -70,34 +122,7 @@ class ComplaintDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      report.status.toLowerCase() == 'resolved'
-                          ? Icons.check_circle
-                          : Icons.hourglass_top,
-                      size: 16,
-                      color:
-                          report.status.toLowerCase() == 'resolved'
-                              ? Colors.green
-                              : Colors.amber,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      report.status.isNotEmpty
-                          ? report.status
-                          : 'Đang chờ xử lý',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color:
-                            report.status.toLowerCase() == 'resolved'
-                                ? Colors.green[800]
-                                : Colors.amber[800],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                // status moved to AppBar
 
                 // Chi tiết khiếu nại
                 SectionCard(
@@ -127,7 +152,7 @@ class ComplaintDetailScreen extends ConsumerWidget {
                               ),
                               child: Image.network(
                                 // If you have a trip image url, use it; otherwise a placeholder
-                                'https://picsum.photos/200/300',
+                                'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg',
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -507,25 +532,7 @@ class ComplaintDetailScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.check_circle,
-                              color: Colors.green,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 6),
-
-                            Text(
-                              'Khiếu nại đã được xử lý',
-                              style: GoogleFonts.inter(
-                                color: Colors.green[800],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
+                        // status message removed as requested
                         if (resp.createTime.isNotEmpty)
                           Text(
                             'Cập nhật lần cuối: ${resp.createTime}',
@@ -556,26 +563,6 @@ class ComplaintDetailScreen extends ConsumerWidget {
                           onPressed: () {},
                           child: Text(
                             'Cancel',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E90FF),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          onPressed: () {},
-                          child: Text(
-                            'Resolve',
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.w600,
                               color: Colors.white,

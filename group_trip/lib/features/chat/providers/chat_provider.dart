@@ -76,6 +76,20 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
     _listenToSignalR();
   }
 
+  int _compareByCreatedTime(ChatMessage a, ChatMessage b) {
+    DateTime parseSafe(String iso) {
+      try {
+        return DateTime.parse(iso).toUtc();
+      } catch (_) {
+        return DateTime.fromMillisecondsSinceEpoch(0).toUtc();
+      }
+    }
+
+    final da = parseSafe(a.createdTime);
+    final db = parseSafe(b.createdTime);
+    return da.compareTo(db);
+  }
+
   Future<void> _loadInitialMessages() async {
     try {
       final chatDetail = await ref.read(chatRepositoryProvider).getChatDetail(chatId);
@@ -97,12 +111,48 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
 
       // Nếu là tin nhắn mới thật sự
       state = state.whenData((currentChat) {
-        // Tránh trùng tin nhắn (nếu đã có id thật từ server thì tốt hơn)
-        final exists = currentChat.messages.any((m) => m.id == msg.id);
-        if (exists) return currentChat;
+        // Tránh trùng tin nhắn theo id
+        final existsById = currentChat.messages.any((m) => m.id == msg.id && msg.id != null);
+        if (existsById) return currentChat;
 
+        // Heuristics: if we have a recent optimistic message (isMine=true) with the
+        // same sender and content (or same attachment) within a short time window,
+        // treat it as the same message and replace it rather than append a duplicate.
+        DateTime parseTime(String iso) {
+          try {
+            return DateTime.parse(iso);
+          } catch (_) {
+            return DateTime.now().toUtc();
+          }
+        }
+
+        final msgTime = parseTime(msg.createdTime);
+
+        final duplicateIndex = currentChat.messages.indexWhere((m) {
+          // Only consider optimistic local messages
+          if (m.isMine != true) return false;
+
+          // Match by exact attachment path or by content and sender within 5s window
+          final mTime = parseTime(m.createdTime);
+          final timeDiff = msgTime.difference(mTime).inSeconds.abs();
+
+          final sameAttachment = m.attachmentUrl.isNotEmpty && msg.attachmentUrl.isNotEmpty && m.attachmentUrl == msg.attachmentUrl;
+          final sameContent = m.content.isNotEmpty && msg.content.isNotEmpty && m.content == msg.content && m.senderId == msg.senderId;
+
+          return (sameAttachment || sameContent) && timeDiff <= 5;
+        });
+
+        if (duplicateIndex != -1) {
+          final updated = [...currentChat.messages];
+          // Replace the optimistic message with the server message (preserve ordering)
+          updated[duplicateIndex] = msg;
+          updated.sort((a, b) => _compareByCreatedTime(a, b));
+          return currentChat.copyWith(messages: updated);
+        }
+
+        // Otherwise append normally
         final updatedMessages = [...currentChat.messages, msg]
-          ..sort((a, b) => a.createdTime.compareTo(b.createdTime));
+          ..sort((a, b) => _compareByCreatedTime(a, b));
 
         return currentChat.copyWith(messages: updatedMessages);
       });
@@ -126,7 +176,7 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
   void addMessageLocally(ChatMessage msg) {
     state = state.whenData((currentChat) {
       final updatedMessages = [...currentChat.messages, msg]
-        ..sort((a, b) => a.createdTime.compareTo(b.createdTime));
+        ..sort((a, b) => _compareByCreatedTime(a, b));
       return currentChat.copyWith(messages: updatedMessages);
     });
   }

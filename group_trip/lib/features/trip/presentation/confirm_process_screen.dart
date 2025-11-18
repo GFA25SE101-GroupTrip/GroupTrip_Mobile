@@ -12,7 +12,7 @@ class ConfirmProcessScreen extends StatefulWidget {
 }
 
 class _ConfirmProcessScreenState extends State<ConfirmProcessScreen> {
-  final String imageUrl = 'https://picsum.photos/seed/2/800/400';
+  final String imageUrl = 'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg2/800/400';
 
   @override
   Widget build(BuildContext context) {
