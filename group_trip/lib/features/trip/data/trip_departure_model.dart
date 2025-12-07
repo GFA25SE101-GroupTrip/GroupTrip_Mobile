@@ -61,20 +61,20 @@ class TripDeparture {
     }
 
     return TripDeparture(
-      id: json['id'],
-      tripId: json['tripId'],
+      id: json['id'] as String? ?? '',
+      tripId: json['tripId'] as String? ?? '',
       startDate: _parseDate(json['startDate']),
       endDate: _parseDate(json['endDate']),
-      departureStatus: json['departureStatus'],
+      departureStatus: json['departureStatus'] as String? ?? '',
       depositTime: _parseDate(json['depositTime']),
       fullPayTime: _parseDate(json['fullPayTime']),
       numberMemberIn: _parseInt(json['numberMemberIn']),
       tripCostRanges: (json['tripCostRanges'] as List<dynamic>?)
-              ?.map((e) => TripCostRange.fromJson(e))
+              ?.map((e) => TripCostRange.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       tripMembers: (json['tripMembers'] as List<dynamic>?)
-              ?.map((e) => TripMember.fromJson(e))
+              ?.map((e) => TripMember.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
     );

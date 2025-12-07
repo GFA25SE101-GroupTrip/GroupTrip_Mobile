@@ -1,3 +1,29 @@
+class UserReadInfo {
+  final String userId;
+  final String userName;
+  final String imgUrl;
+
+  UserReadInfo({
+    required this.userId,
+    required this.userName,
+    required this.imgUrl,
+  });
+
+  factory UserReadInfo.fromJson(Map<String, dynamic> json) {
+    return UserReadInfo(
+      userId: json['userId'] as String? ?? '',
+      userName: json['userName'] as String? ?? '',
+      imgUrl: json['img_url'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'userId': userId,
+        'userName': userName,
+        'img_url': imgUrl,
+      };
+}
+
 class ChatMessage {
   final String? id; // bắt buộc có (dù tạm thời)
   final String chatId;
@@ -8,7 +34,7 @@ class ChatMessage {
   final String messageType;
   final String createdTime;
   final bool isMine;
-  final List<String> userRead;
+  final List<UserReadInfo> userRead;
 
   // Thêm 2 field cho event "đã đọc"
   final bool isMarkAsReadEvent;
@@ -59,7 +85,7 @@ class ChatMessage {
     String? messageType,
     String? createdTime,
     bool? isMine,
-    List<String>? userRead,
+    List<UserReadInfo>? userRead,
     bool? isMarkAsReadEvent,
     String? markedUserId,
   }) {
@@ -143,10 +169,12 @@ class ChatMessage {
       isMine = false;
     }
 
-    List<String> userRead = [];
+    List<UserReadInfo> userRead = [];
     try {
       if (json['userRead'] is List) {
-        userRead = (json['userRead'] as List).map((e) => e.toString()).toList();
+        userRead = (json['userRead'] as List<dynamic>)
+            .map((e) => UserReadInfo.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
       }
     } catch (_) {
       userRead = [];
@@ -164,5 +192,20 @@ class ChatMessage {
       isMine: isMine,
       userRead: userRead,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'chatId': chatId,
+      'senderId': senderId,
+      'senderName': senderName,
+      'content': content,
+      'attachmentUrl': attachmentUrl,
+      'messageType': messageType,
+      'createdTime': createdTime,
+      'isMine': isMine,
+      'userRead': userRead.map((e) => e.toJson()).toList(),
+    };
   }
 }

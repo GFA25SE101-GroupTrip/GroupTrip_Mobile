@@ -13,25 +13,25 @@ class ScheduleSection extends StatelessWidget {
       if (segments.isNotEmpty) {
         int day = 1;
         for (final seg in segments) {
-          String title = 'Đến ${seg.toDestination ?? "điểm tiếp theo"}';
-          if (seg.transport != null && seg.transport!.isNotEmpty) {
+          String title = 'Đến ${seg.toDestination}';
+          if (seg.transport.isNotEmpty) {
             title += ' bằng ${seg.transport}';
           }
 
           final pois = <Map<String, dynamic>>[];
-          if (seg.segmentPOIs != null && seg.segmentPOIs!.isNotEmpty) {
-            for (final poi in seg.segmentPOIs!) {
+          if (seg.segmentPOIs.isNotEmpty) {
+            for (final poi in seg.segmentPOIs) {
               final activities = <String>[];
-              if (poi.poiActivities != null && poi.poiActivities!.isNotEmpty) {
-                for (final act in poi.poiActivities!) {
+              if (poi.poiActivities.isNotEmpty) {
+                for (final act in poi.poiActivities) {
                   if (act.isAlternative == false) {
-                    activities.add(act.name ?? '');
+                    activities.add(act.name);
                   }
                 }
               }
 
               pois.add({
-                'name': poi.name ?? '',
+                'name': poi.name,
                 'activities': activities,
               });
             }

@@ -111,8 +111,9 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
 
       // Nếu là tin nhắn mới thật sự
       state = state.whenData((currentChat) {
+        final chatMessages = currentChat.messages ?? [];
         // Tránh trùng tin nhắn theo id
-        final existsById = currentChat.messages.any((m) => m.id == msg.id && msg.id != null);
+        final existsById = chatMessages.any((m) => m.id == msg.id && msg.id != null);
         if (existsById) return currentChat;
 
         // Heuristics: if we have a recent optimistic message (isMine=true) with the
@@ -128,7 +129,7 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
 
         final msgTime = parseTime(msg.createdTime);
 
-        final duplicateIndex = currentChat.messages.indexWhere((m) {
+        final duplicateIndex = chatMessages.indexWhere((m) {
           // Only consider optimistic local messages
           if (m.isMine != true) return false;
 
@@ -143,7 +144,7 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
         });
 
         if (duplicateIndex != -1) {
-          final updated = [...currentChat.messages];
+          final updated = [...chatMessages];
           // Replace the optimistic message with the server message (preserve ordering)
           updated[duplicateIndex] = msg;
           updated.sort((a, b) => _compareByCreatedTime(a, b));
@@ -151,7 +152,7 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
         }
 
         // Otherwise append normally
-        final updatedMessages = [...currentChat.messages, msg]
+        final updatedMessages = [...chatMessages, msg]
           ..sort((a, b) => _compareByCreatedTime(a, b));
 
         return currentChat.copyWith(messages: updatedMessages);
@@ -162,10 +163,14 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
   // Xử lý khi có người đọc tin
   void _handleMarkAsRead(String userId) {
     state = state.whenData((currentChat) {
-      final updatedMessages = currentChat.messages.map((m) {
+      final chatMessages = currentChat.messages ?? [];
+      final updatedMessages = chatMessages.map((m) {
         // Chỉ thêm userId vào danh sách đã đọc nếu chưa có
-        if (m.userRead.contains(userId)) return m;
-        return m.copyWith(userRead: [...m.userRead, userId]);
+        final alreadyRead = m.userRead.any((u) => u.userId == userId);
+        if (alreadyRead) return m;
+        
+        // Add new user read info with minimal data (userId is required)
+        return m.copyWith(userRead: [...m.userRead, UserReadInfo(userId: userId, userName: '', imgUrl: '')]);
       }).toList();
 
       return currentChat.copyWith(messages: updatedMessages);
@@ -175,7 +180,8 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
   // Gọi khi gửi tin nhắn thành công (optimistic update)
   void addMessageLocally(ChatMessage msg) {
     state = state.whenData((currentChat) {
-      final updatedMessages = [...currentChat.messages, msg]
+      final chatMessages = currentChat.messages ?? [];
+      final updatedMessages = [...chatMessages, msg]
         ..sort((a, b) => _compareByCreatedTime(a, b));
       return currentChat.copyWith(messages: updatedMessages);
     });

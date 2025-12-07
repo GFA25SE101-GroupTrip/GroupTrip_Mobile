@@ -14,4 +14,8 @@ class TripRepository {
   Future<bool> joinTrip(String tripDepartureId) async {
     return await remoteDataSource.joinTrip(tripDepartureId);
   }
+
+  Future<bool> checkJoin(String tripDepartureId) async {
+    return await remoteDataSource.checkJoin(tripDepartureId);
+  }
 } 

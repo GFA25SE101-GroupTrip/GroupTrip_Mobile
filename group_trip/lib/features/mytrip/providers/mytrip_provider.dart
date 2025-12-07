@@ -24,11 +24,11 @@ class MyTripNotifier extends StateNotifier<AsyncValue<List<MyTripModel>>> {
 
   MyTripNotifier(this.repository) : super(const AsyncData([]));
 
-  Future<void> fetchMyTrips() async {
+  Future<void> fetchMyTrips({String status = 'UpComming'}) async {
     state = const AsyncLoading();
     try {
-      final myTrips = await repository.fetchMyTrips();
-      print('Fetched ${myTrips.length} my trips');
+      final myTrips = await repository.fetchMyTrips(status: status);
+      print('Fetched ${myTrips.length} my trips with status: $status');
       state = AsyncData(myTrips);
     } catch (e, st) {
       state = AsyncError(e, st);

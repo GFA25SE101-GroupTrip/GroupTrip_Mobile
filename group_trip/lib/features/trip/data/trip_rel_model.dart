@@ -14,17 +14,19 @@ class TripModel {
   final String? baseTripId;
   final bool isCustom;
   final String name;
-  final String fromDestination;
-  final double? fromLongtitude;
-  final double? fromLatitude;
-  final String finalDestination;
-  final double? finalLongtitude;
-  final double? finalLatitude;
+  final String baseTripName;
+  final String? fromDestination;
+  final String? fromLongtitude;
+  final String? fromLatitude;
+  final String? finalDestination;
+  final String? finalLongtitude;
+  final String? finalLatitude;
   final String description;
   final String status;
   final int minUsers;
   final int maxUsers;
   final double avarageRating;
+  final String createdTime;
   final List<TripDeparture> tripDepartures;
   final List<TripSegment> tripSegments;
   final List<TripTagRelation> tripTagRelations;
@@ -35,16 +37,17 @@ class TripModel {
   TripModel({
     required this.id,
     required this.creatorId,
-     this.creatorName,
-     this.creatorImg,
+    this.creatorName,
+    this.creatorImg,
     this.userCustomID,
     this.baseTripId,
+    required this.baseTripName,
     required this.isCustom,
     required this.name,
-    required this.fromDestination,
+    this.fromDestination,
     this.fromLongtitude,
     this.fromLatitude,
-    required this.finalDestination,
+    this.finalDestination,
     this.finalLongtitude,
     this.finalLatitude,
     required this.description,
@@ -52,6 +55,7 @@ class TripModel {
     required this.minUsers,
     required this.maxUsers,
     required this.avarageRating,
+    required this.createdTime,
     required this.tripDepartures,
     required this.tripSegments,
     required this.tripTagRelations,
@@ -88,6 +92,21 @@ class TripModel {
       return v.toString();
     }
 
+    String? _stringifyNullable(dynamic v) {
+      if (v == null) return null;
+      if (v is String) return v;
+      if (v is num) return v.toString();
+      if (v is Map) {
+        final keys = ['url', 'img', 'path', 'image', 'file', 'name'];
+        for (final k in keys) {
+          if (v.containsKey(k) && v[k] != null) return v[k].toString();
+        }
+        if (v.containsKey('id')) return v['id'].toString();
+        return v.values.isNotEmpty ? v.values.first.toString() : null;
+      }
+      return v.toString();
+    }
+
     List<dynamic> _toList(dynamic v) {
       if (v == null) return <dynamic>[];
       if (v is List) return v;
@@ -98,23 +117,25 @@ class TripModel {
     return TripModel(
       id: _stringify(json['id']),
       creatorId: _stringify(json['creatorId']),
-      creatorName: _stringify(json['creatorName']), // nullable-ish
-      creatorImg: _stringify(json['creator_Img']), // nullable-ish
-      userCustomID: _stringify(json['userCustomID']),
-      baseTripId: _stringify(json['baseTripId']),
+      creatorName: _stringifyNullable(json['creatorName']),
+      creatorImg: _stringifyNullable(json['creator_Img']),
+      userCustomID: _stringifyNullable(json['userCustomID']),
+      baseTripId: _stringifyNullable(json['baseTripId']),
+      baseTripName: _stringify(json['baseTripName']),
       isCustom: json['isCustom'] ?? false,
       name: _stringify(json['name']),
-      fromDestination: _stringify(json['fromDestination']),
-      fromLongtitude: json['fromLongtitude']?.toDouble(),
-      fromLatitude: json['fromLatitude']?.toDouble(),
-      finalLongtitude: json['finalLongtitude']?.toDouble(),
-      finalLatitude: json['finalLatitude']?.toDouble(),
-      finalDestination: _stringify(json['finalDestination']),
+      fromDestination: _stringifyNullable(json['fromDestination']),
+      fromLongtitude: _stringifyNullable(json['fromLongtitude']),
+      fromLatitude: _stringifyNullable(json['fromLatitude']),
+      finalLongtitude: _stringifyNullable(json['finalLongtitude']),
+      finalLatitude: _stringifyNullable(json['finalLatitude']),
+      finalDestination: _stringifyNullable(json['finalDestination']),
       description: _stringify(json['description']),
       status: _stringify(json['status']),
       minUsers: _parseInt(json['minUsers']),
       maxUsers: _parseInt(json['maxUsers']),
       avarageRating: (json['avarageRating'] ?? 0).toDouble(),
+      createdTime: _stringify(json['createdTime']),
         tripDepartures: _toList(json['tripDepartures'])
           .where((e) => e != null && e is Map)
           .map((e) => TripDeparture.fromJson(Map<String, dynamic>.from(e as Map)))
@@ -146,6 +167,7 @@ class TripModel {
         'creator_Img': creatorImg,
         'userCustomID': userCustomID,
         'baseTripId': baseTripId,
+        'baseTripName': baseTripName,
         'isCustom': isCustom,
         'name': name,
         'fromDestination': fromDestination,
@@ -159,6 +181,7 @@ class TripModel {
         'minUsers': minUsers,
         'maxUsers': maxUsers,
         'avarageRating': avarageRating,
+        'createdTime': createdTime,
         'tripDepartures': tripDepartures.map((e) => e.toJson()).toList(),
         'tripSegments': tripSegments.map((e) => e.toJson()).toList(),
         'tripTagRelations': tripTagRelations.map((e) => e.toJson()).toList(),

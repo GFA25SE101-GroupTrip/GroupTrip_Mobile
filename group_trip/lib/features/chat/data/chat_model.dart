@@ -6,19 +6,24 @@ class ChatModel {
   final String title;
   final bool isGroup;
   final String chatImg;
-  final int unreadCount;
+  final int activeUser;
+  final int unreadCount; // Default to 0 in fromJson
   final String? lastMessage;
+  final String? lastMessageTime;
   final List<ChatMember>? chatMembers;
-  final List<ChatMessage> messages;
+  final List<ChatMessage>? messages;
+
   ChatModel({
     required this.id,
     required this.title,
     required this.isGroup,
     required this.chatImg,
-    required this.unreadCount,
+    this.activeUser = 0,
+    this.unreadCount = 0,
     this.lastMessage,
+    this.lastMessageTime,
     this.chatMembers,
-    required this.messages,
+    this.messages,
   });
   factory ChatModel.fromJson(Map<String, dynamic> json) {
     String id = '';
@@ -49,6 +54,17 @@ class ChatModel {
       chatImg = '';
     }
 
+    int activeUser = 0;
+    try {
+      if (json['activeUser'] is int) {
+        activeUser = json['activeUser'];
+      } else if (json['activeUser'] is String) {
+        activeUser = int.tryParse(json['activeUser']) ?? 0;
+      }
+    } catch (_) {
+      activeUser = 0;
+    }
+
     int unreadCount = 0;
     try {
       if (json['unreadCount'] is int) {
@@ -67,20 +83,33 @@ class ChatModel {
       lastMessage = null;
     }
 
-    List<dynamic>? chatMembers;
+    String? lastMessageTime;
     try {
-      if (json['chatMembers'] is List) chatMembers = List<dynamic>.from(json['chatMembers']);
+      lastMessageTime = json['lastMessageTime']?.toString();
+    } catch (_) {
+      lastMessageTime = null;
+    }
+
+    List<ChatMember>? chatMembers;
+    try {
+      if (json['chatMembers'] is List) {
+        chatMembers = (json['chatMembers'] as List<dynamic>)
+            .map((e) => ChatMember.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+      }
     } catch (_) {
       chatMembers = null;
     }
 
-    List<dynamic> messages = [];
+    List<ChatMessage>? messages;
     try {
       if (json['messages'] is List) {
-        messages = List<dynamic>.from(json['messages']);
+        messages = (json['messages'] as List<dynamic>)
+            .map((e) => ChatMessage.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
       }
     } catch (_) {
-      messages = [];
+      messages = null;
     }
 
     return ChatModel(
@@ -88,10 +117,12 @@ class ChatModel {
       title: title,
       isGroup: isGroup,
       chatImg: chatImg,
+      activeUser: activeUser,
       unreadCount: unreadCount,
       lastMessage: lastMessage,
-      chatMembers: chatMembers?.map((e) => ChatMember.fromJson(Map<String, dynamic>.from(e))).toList(),
-      messages: messages.map((e) => ChatMessage.fromJson(Map<String, dynamic>.from(e))).toList(),
+      lastMessageTime: lastMessageTime,
+      chatMembers: chatMembers,
+      messages: messages,
     );
   }
 
@@ -101,10 +132,12 @@ class ChatModel {
       'title': title,
       'isGroup': isGroup,
       'chatImg': chatImg,
+      'activeUser': activeUser,
       'unreadCount': unreadCount,
       'lastMessage': lastMessage,
-      'chatMembers': chatMembers,
-      'messages': messages,
+      'lastMessageTime': lastMessageTime,
+      'chatMembers': chatMembers?.map((e) => e.toJson()).toList(),
+      'messages': messages?.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -113,8 +146,10 @@ class ChatModel {
     String? title,
     bool? isGroup,
     String? chatImg,
+    int? activeUser,
     int? unreadCount,
     String? lastMessage,
+    String? lastMessageTime,
     List<ChatMember>? chatMembers,
     List<ChatMessage>? messages,
   }) {
@@ -123,8 +158,10 @@ class ChatModel {
       title: title ?? this.title,
       isGroup: isGroup ?? this.isGroup,
       chatImg: chatImg ?? this.chatImg,
+      activeUser: activeUser ?? this.activeUser,
       unreadCount: unreadCount ?? this.unreadCount,
       lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       chatMembers: chatMembers ?? this.chatMembers,
       messages: messages ?? this.messages,
     );

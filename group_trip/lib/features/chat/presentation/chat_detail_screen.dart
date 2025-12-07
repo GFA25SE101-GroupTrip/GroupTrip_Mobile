@@ -156,7 +156,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Lỗi: $err')),
         data: (chat) {
-          final messages = chat.messages;
+          final messages = chat.messages ?? [];
 
           return Column(
             children: [
@@ -326,7 +326,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       messageType: isImage ? 'image' : 'Normal',
       createdTime: DateTime.now().toUtc().toIso8601String(),
       isMine: true,
-      userRead: [],
+      userRead: const [],
     );
 
     // Optimistic UI

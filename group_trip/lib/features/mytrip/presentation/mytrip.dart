@@ -14,12 +14,17 @@ class MyTripsScreen extends ConsumerStatefulWidget {
 }
 
 class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
+  late String _selectedStatus;
+  
+  final List<String> _statusOptions = ['UpComming', 'InProgress', 'Completed'];
+
   @override
   void initState() {
     super.initState();
+    _selectedStatus = _statusOptions[0];
     // Fetch once when the screen is inserted in the tree
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(mytripNotifierProvider.notifier).fetchMyTrips();
+      ref.read(mytripNotifierProvider.notifier).fetchMyTrips(status: _selectedStatus);
     });
   }
 
@@ -32,18 +37,57 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
         centerTitle: true,
         elevation: 1,
       ),
-      body: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Lỗi khi tải chuyến đi: $e')),
-        data: (items) {
-          if (items.isEmpty) return const Center(child: Text('Không có chuyến đi'));
-          return ListView.separated(
+      body: Column(
+        children: [
+          // Status tabs
+          Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) => MyTripCard(model: items[index]),
-          );
-        },
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _statusOptions.map((status) {
+                  final isSelected = _selectedStatus == status;
+                  final statusLabel = status == 'UpComming' 
+                      ? 'Sắp tới' 
+                      : status == 'InProgress'
+                          ? 'Đang diễn ra'
+                          : 'Hoàn thành';
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      selected: isSelected,
+                      label: Text(statusLabel),
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedStatus = status;
+                        });
+                        // Fetch trips with new status
+                        ref.read(mytripNotifierProvider.notifier).fetchMyTrips(status: status);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          // Trip list
+          Expanded(
+            child: state.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, st) => Center(child: Text('Lỗi khi tải chuyến đi: $e')),
+              data: (items) {
+                if (items.isEmpty) return const Center(child: Text('Không có chuyến đi'));
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => MyTripCard(model: items[index]),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -104,6 +148,9 @@ Color statusColor(String s) {
     final start = model.startDate;
     final end = model.endDate;
     final participants = model.numberMemberIn;
+    final maxUsers = model.maxUsers;
+    final isUserJoined = model.currentUserStatus.toLowerCase() == 'active';
+    final isCanceled = model.cancelReason != null && model.cancelReason!.isNotEmpty;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -112,85 +159,112 @@ Color statusColor(String s) {
         onTap: () {
           // open trip detail
         },
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // Image or placeholder
-              Container(
-                width: 110,
-                height: 88,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey.shade200,
-                ),
-                child: model.img.isNotEmpty
-                    ? Image.network(model.img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.photo, size: 40, color: Colors.grey))
-                    : const Icon(Icons.photo, size: 40, color: Colors.grey),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Large image at top
+            Container(
+              width: double.infinity,
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            model.name,
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                          ),
+              child: model.img.isNotEmpty
+                  ? Image.network(model.img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.photo, size: 50, color: Colors.grey))
+                  : const Icon(Icons.photo, size: 50, color: Colors.grey),
+            ),
+            // Content below image
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          model.name,
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                         ),
-                        const SizedBox(width: 8),
-                        // Status badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: statusColor(model.tripStatus).withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            statusLabel(model.departureStatus),
-                            style: theme.textTheme.bodySmall?.copyWith(color: statusColor(model.tripStatus), fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    if (start.year != 1970) ...[
-                      Text(
-                        formatRange(start, end),
-                        style: theme.textTheme.bodySmall,
                       ),
-                      const SizedBox(height: 8),
-                      Text(daysUntilStart(start), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                    ] else ...[
-                      Text('Chưa có lịch trình', style: theme.textTheme.bodySmall),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.people, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 6),
-                        Text('$participants người tham gia', style: theme.textTheme.bodySmall),
-                        const Spacer(),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            minimumSize: const Size(0, 36),
-                          ),
-                          onPressed: () {},
-                          child: const Text('Chi tiết'),
+                      const SizedBox(width: 8),
+                      // Status badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor(model.departureStatus).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      ],
+                        child: Text(
+                          statusLabel(model.departureStatus),
+                          style: theme.textTheme.bodySmall?.copyWith(color: statusColor(model.departureStatus), fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  if (start.year != 1970) ...[
+                    Text(
+                      formatRange(start, end),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(daysUntilStart(start), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                  ] else ...[
+                    Text('Chưa có lịch trình', style: theme.textTheme.bodySmall),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.people, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 6),
+                      Text('$participants/$maxUsers người', style: theme.textTheme.bodySmall),
+                      const SizedBox(width: 12),
+                      // User status indicator
+                      if (isUserJoined)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('Đã tham gia', 
+                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.green, fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      const Spacer(),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          minimumSize: const Size(100, 42),
+                        ),
+                        onPressed: () {},
+                        child: const Text('Chi tiết', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  // Show cancel reason if trip is canceled
+                  if (isCanceled) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Lý do hủy: ${model.cancelReason}',
+                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.redAccent, fontSize: 11),
+                      ),
                     ),
                   ],
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,12 +1,16 @@
 class TripCostRange {
+  final String? id;
   final int minTraveller;
   final int maxTraveller;
   final int price;
+
   TripCostRange({
+    this.id,
     required this.minTraveller,
     required this.maxTraveller,
     required this.price,
   });
+
   factory TripCostRange.fromJson(Map<String, dynamic> json) {
     int _parseInt(dynamic v) {
       if (v == null) return 0;
@@ -20,15 +24,17 @@ class TripCostRange {
     }
 
     return TripCostRange(
+      id: json['id'] as String?,
       minTraveller: _parseInt(json['minTraveller']),
       maxTraveller: _parseInt(json['maxTraveller']),
       price: _parseInt(json['price']),
     );
-
   }
+
   Map<String, dynamic> toJson() => {
+        'id': id,
         'minTraveller': minTraveller,
         'maxTraveller': maxTraveller,
         'price': price,
-  };
+      };
 }

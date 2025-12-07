@@ -18,16 +18,28 @@ class SegmentPOIs {
     required this.poiActivities,
   });
   factory SegmentPOIs.fromJson(Map<String, dynamic> json) {
+    int _toInt(dynamic v) {
+      if (v == null) return 0;
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      try {
+        return int.parse(v.toString());
+      } catch (_) {
+        return 0;
+      }
+    }
+
     return SegmentPOIs(
-      id: json['id'] as String,
-      segmentId: json['segmentId'] as String,
-      name: json['name'] as String,
+      id: json['id'] as String? ?? '',
+      segmentId: json['segmentId'] as String? ?? '',
+      name: json['name'] as String? ?? '',
       poiLongtitude: json['poiLongtitude'] as String?,
       poiLatitude: json['poiLatitude'] as String?,
-      orderInSegment: json['orderInSegment'] as int,
-      poiActivities: (json['poiActivities'] as List<dynamic>)
-          .map((e) => TripPOIActivity.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      orderInSegment: _toInt(json['orderInSegment']),
+      poiActivities: (json['poiActivities'] as List<dynamic>?)
+              ?.map((e) => TripPOIActivity.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
   Map<String, dynamic> toJson() {
@@ -38,7 +50,7 @@ class SegmentPOIs {
       'poiLongtitude': poiLongtitude,
       'poiLatitude': poiLatitude,
       'orderInSegment': orderInSegment,
-      'poiActivities': poiActivities,
+      'poiActivities': poiActivities.map((e) => e.toJson()).toList(),
     };
   }
  

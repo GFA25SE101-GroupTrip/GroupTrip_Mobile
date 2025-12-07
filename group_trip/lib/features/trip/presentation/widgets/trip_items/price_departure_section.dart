@@ -10,6 +10,7 @@ import 'package:group_trip/features/trip/presentation/widgets/process/deposit_pa
     as trip_sheet;
 import 'package:group_trip/features/wallet/presentation/widget/payment_sheet.dart'
     as wallet_sheet;
+import 'package:group_trip/features/trip/providers/tripProvider.dart';
 
 class PriceDepartureSection extends ConsumerWidget {
   final List<TripDeparture> tripDepartures;
@@ -109,6 +110,10 @@ class PriceDepartureSection extends ConsumerWidget {
           );
           final memberCount = departure.tripMembers.length;
           final costRanges = departure.tripCostRanges;
+          
+          // Watch checkJoin status for this specific departure
+          final checkJoinStatus = ref.watch(CheckJoinTripProvider(departure.id));
+          final checkJoin = checkJoinStatus.asData?.value ?? false;
 
           return Container(
             margin: const EdgeInsets.only(bottom: 14),
@@ -207,25 +212,44 @@ class PriceDepartureSection extends ConsumerWidget {
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      side: const BorderSide(color: Color(0xFF007AFF)),
-                    ),
-                    onPressed:
-                        () =>
-                            _onSelectDeparture(context, departure, intBalance),
-                    child: const Text(
-                      "Chọn ngày này",
-                      style: TextStyle(
-                        color: Color(0xFF007AFF),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                  child: checkJoin
+                      ? OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            side: const BorderSide(
+                              color: Color(0xFF22C55E),
+                            ),
+                          ),
+                          onPressed: null,
+                          child: const Text(
+                            "Bạn đã tham gia",
+                            style: TextStyle(
+                              color: Color(0xFF22C55E),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        )
+                      : OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            side: const BorderSide(color: Color(0xFF007AFF)),
+                          ),
+                          onPressed: () =>
+                              _onSelectDeparture(context, departure, intBalance),
+                          child: const Text(
+                            "Chọn ngày này",
+                            style: TextStyle(
+                              color: Color(0xFF007AFF),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                 ),
               ],
             ),

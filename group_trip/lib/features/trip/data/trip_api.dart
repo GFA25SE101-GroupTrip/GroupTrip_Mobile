@@ -5,8 +5,14 @@ class TripRemoteDataSource {
   final ApiClient apiClient;
   TripRemoteDataSource({required this.apiClient});
 
-  Future<List<TripModel>> fetchTrips() async {
-    final response = await apiClient.get('trip','/api/trips');
+  Future<List<TripModel>> fetchTrips({String? status = 'Published'}) async {
+    final endpoint = '/api/trips' + (status != null ? '/status' : '');
+    final queryParams = status != null ? {'status': status} : <String, dynamic>{};
+    
+    final response = status != null
+        ? await apiClient.getWithParams('trip', endpoint, queryParameters: queryParams)
+        : await apiClient.get('trip', '/api/trips');
+    
     if (response.statusCode != null &&
         response.statusCode! >= 200 &&
         response.statusCode! < 300) {
@@ -88,4 +94,35 @@ class TripRemoteDataSource {
       return false;
     }
   }
+
+Future<bool> checkJoin(String tripDepartureId) async {
+  final response = await apiClient.get(
+    'trip',
+    '/api/trip-members/check-join/$tripDepartureId',
+  );
+
+  if (response.statusCode != null &&
+      response.statusCode! >= 200 &&
+      response.statusCode! < 300) {
+    dynamic payload = response.data;
+    print('Check join trip payload: $payload');
+
+    if (payload is Map && payload.containsKey('data')) {
+      payload = payload['data'];
+    }
+
+    if (payload is Map<String, dynamic> &&
+        payload.containsKey('isJoined')) {
+      return payload['isJoined'] as bool;
+    } else {
+      throw Exception(
+        'Unexpected check join payload shape: ${payload.runtimeType}',
+      );
+    }
+  } else {
+    throw Exception('Failed to check join trip: status=${response.statusCode}');
+  }
+}
+
+
 }

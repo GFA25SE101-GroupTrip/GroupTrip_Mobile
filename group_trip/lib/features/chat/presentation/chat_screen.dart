@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:group_trip/features/chat/presentation/chat_detail_screen.dart';
 import 'package:group_trip/features/chat/providers/chat_provider.dart';
 import 'package:group_trip/features/chat/data/chat_model.dart';
@@ -200,6 +201,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Widget _buildMessageCard(ChatModel msg) {
+    String _formatTime(String? timeStr) {
+      if (timeStr == null || timeStr.isEmpty) return '';
+      try {
+        final dateTime = DateTime.parse(timeStr);
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final yesterday = DateTime(now.year, now.month, now.day - 1);
+        final msgDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+        if (msgDate == today) {
+          // Same day: show HH:mm
+          return DateFormat('HH:mm').format(dateTime);
+        } else if (msgDate == yesterday) {
+          // Yesterday: show "Hôm qua"
+          return 'Hôm qua';
+        } else if (now.difference(msgDate).inDays < 7) {
+          // This week: show day name
+          return DateFormat('EEEE', 'vi').format(dateTime);
+        } else {
+          // Older: show dd/MM/yyyy
+          return DateFormat('dd/MM/yyyy').format(dateTime);
+        }
+      } catch (_) {
+        return '';
+      }
+    }
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -231,9 +259,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             radius: 30,
             backgroundImage: NetworkImage(msg.chatImg),
           ),
-          title: Text(
-            msg.title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  msg.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                ),
+              ),
+              Text(
+                _formatTime(msg.lastMessageTime),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
           subtitle: Text(
             msg.lastMessage ?? '',

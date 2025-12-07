@@ -134,7 +134,10 @@ class _TripDetailBodyState extends ConsumerState<TripDetailBody> {
                 },
               ),
               const SizedBox(height: 20),
-              TripTabContent(selectedIndex: _selectedTabIndex, trip: TripdetailContentData),
+              TripTabContent(
+                selectedIndex: _selectedTabIndex,
+                trip: TripdetailContentData,
+              ),
             ],
           ),
         ),

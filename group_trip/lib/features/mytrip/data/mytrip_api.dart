@@ -5,8 +5,12 @@ class MyTripRemoteDataSource {
   final ApiClient api;
   MyTripRemoteDataSource({required this.api});
 
-  Future<List<MyTripModel>> fetchMyTrips() async {
-    final response = await api.get('trip', '/api/trip-members/joined-trip');
+  Future<List<MyTripModel>> fetchMyTrips({String status = 'UpComming'}) async {
+    final response = await api.getWithParams(
+      'trip',
+      '/api/trip-members/filter-joined-trip',
+      queryParameters: {'status': status},
+    );
     if(response.statusCode != null &&
         response.statusCode! >= 200 &&
         response.statusCode! < 300) {

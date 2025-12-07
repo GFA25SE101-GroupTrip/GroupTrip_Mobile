@@ -8,11 +8,10 @@ class TripSegment {
   final String toDestination;
   final String? toLongtitude;
   final String? toLatitude;
-  final DateTime startTime;
-  final DateTime endTime;
   final int orderInTrip;
   final String transport;
   final List<SegmentPOIs> segmentPOIs;
+
   TripSegment({
     required this.id,
     required this.fromDestination,
@@ -21,32 +20,28 @@ class TripSegment {
     required this.toDestination,
     this.toLongtitude,
     this.toLatitude,
-    required this.startTime,
-    required this.endTime,
     required this.orderInTrip,
     required this.transport,
     required this.segmentPOIs,
   });
   factory TripSegment.fromJson(Map<String, dynamic> json) {
     return TripSegment(
-      id: json['id'] as String,
-      fromDestination: json['fromDestination'] as String,
+      id: json['id'] as String? ?? '',
+      fromDestination: json['fromDestination'] as String? ?? '',
       fromLongtitude: json['fromLongtitude'] as String?,
       fromLatitude: json['fromLatitude'] as String?,
-      toDestination: json['toDestination'] as String,
+      toDestination: json['toDestination'] as String? ?? '',
       toLongtitude: json['toLongtitude'] as String?,
       toLatitude: json['toLatitude'] as String?,
-      startTime: DateTime.parse(json['startTime'] as String),
-      endTime: DateTime.parse(json['endTime'] as String),
-      orderInTrip: json['orderInTrip'] as int,
-      transport: json['transport'] as String,
-      segmentPOIs: (json['segmentPOIs'] as List<dynamic>)
-          .map((e) => SegmentPOIs.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      orderInTrip: (json['orderInTrip'] as num?)?.toInt() ?? 0,
+      transport: json['transport'] as String? ?? '',
+      segmentPOIs: (json['segmentPOIs'] as List<dynamic>?)
+              ?.map((e) => SegmentPOIs.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
-
-}
- Map<String, dynamic> toJson() {
+  }
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'fromDestination': fromDestination,
@@ -55,11 +50,9 @@ class TripSegment {
       'toDestination': toDestination,
       'toLongtitude': toLongtitude,
       'toLatitude': toLatitude,
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
       'orderInTrip': orderInTrip,
       'transport': transport,
-      'segmentPOIs': segmentPOIs,
+      'segmentPOIs': segmentPOIs.map((e) => e.toJson()).toList(),
     };
   }
 }
