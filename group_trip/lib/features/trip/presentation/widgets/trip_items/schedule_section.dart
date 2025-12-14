@@ -128,7 +128,7 @@ class ScheduleSection extends StatelessWidget {
 
                   // Danh sách POI
                   ...pois.map((poi) {
-                    final activities = poi['activities'] as List<String>;
+                    final activities = (poi['activities'] as List).cast<String>();
                     return Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: Column(
@@ -153,37 +153,55 @@ class ScheduleSection extends StatelessWidget {
                               ),
                             ],
                           ),
-                          if (activities.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 28, top: 6),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: activities.map((act) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.check_circle,
-                                          size: 14,
-                                          color: Color(0xFF34C759),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            act,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Color(0xFF3A3A3C),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 28, top: 6),
+                            child: activities.isNotEmpty
+                                ? Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: activities.map((act) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 2),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.check_circle,
+                                              size: 14,
+                                              color: Color(0xFF34C759),
                                             ),
-                                          ),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                act,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Color(0xFF3A3A3C),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
+                                      );
+                                    }).toList(),
+                                  )
+                                : Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.info_outline,
+                                        size: 14,
+                                        color: Color(0xFF8E8E93),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        'Không có hoạt động nào',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF8E8E93),
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
                         ],
                       ),
                     );

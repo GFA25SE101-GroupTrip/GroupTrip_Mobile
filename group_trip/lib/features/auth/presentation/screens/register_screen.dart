@@ -36,16 +36,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String? _validatePassword(String? value) {
     final v = value ?? '';
     if (v.length < 6) {
-      return 'Passwords must be at least 6 characters.';
+      return 'Mật khẩu phải có ít nhất 6 ký tự.';
     }
     if (!_specialCharReg.hasMatch(v)) {
-      return 'Passwords must have at least one non alphanumeric character.';
+      return 'Mật khẩu phải có ít nhất một ký tự đặc biệt.';
     }
     if (!_digitReg.hasMatch(v)) {
-      return 'Passwords must have at least one digit (\'0\'-\'9\').';
+      return 'Mật khẩu phải có ít nhất một số (0-9).';
     }
     if (!_upperCaseReg.hasMatch(v)) {
-      return 'Passwords must have at least one uppercase (\'A\'-\'Z\').';
+      return 'Mật khẩu phải có ít nhất một chữ hoa (A-Z).';
     }
     return null;
   }
@@ -54,18 +54,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   List<String> _passwordValidationErrors(String pwd) {
     final errors = <String>[];
     if (pwd.length < 6) {
-      errors.add('Passwords must be at least 6 characters.');
+      errors.add('Mật khẩu phải có ít nhất 6 ký tự.');
     }
     if (!_specialCharReg.hasMatch(pwd)) {
       errors.add(
-        'Passwords must have at least one non alphanumeric character.',
+        'Mật khẩu phải có ít nhất một ký tự đặc biệt.',
       );
     }
     if (!_digitReg.hasMatch(pwd)) {
-      errors.add('Passwords must have at least one digit (\'0\'-\'9\').');
+      errors.add('Mật khẩu phải có ít nhất một số (0-9).');
     }
     if (!_upperCaseReg.hasMatch(pwd)) {
-      errors.add('Passwords must have at least one uppercase (\'A\'-\'Z\').');
+      errors.add('Mật khẩu phải có ít nhất một chữ hoa (A-Z).');
     }
     return errors;
   }
@@ -104,14 +104,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       // await yourAuthRepository.verifyGoogleToken(googleAuth.idToken);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Welcome, ${googleUser.displayName ?? 'User'}')),
+        SnackBar(content: Text('Chào mừng, ${googleUser.displayName ?? 'Người dùng'}')),
       );
     } catch (e, st) {
       print('❌ Google sign-in error: $e');
       print('🔍 StackTrace: $st');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Google sign-in error: $e')));
+      ).showSnackBar(SnackBar(content: Text('Đã hủy đăng nhập Google')));
     }
   }
 
@@ -130,7 +130,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _register() async {
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please accept the terms of service")),
+        const SnackBar(content: Text("Vui lòng chấp nhận điều khoản dịch vụ")),
       );
       return;
     }
@@ -143,7 +143,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (pwd != confirm) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
+        ).showSnackBar(const SnackBar(content: Text('Mật khẩu không khớp')));
         return;
       }
 
@@ -179,9 +179,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Register Success!'),
-                duration: Duration(seconds: 2),
-                backgroundColor: Colors.green,
+          content: Text('Đăng ký thành công!'),
               ),
             );
 
@@ -192,7 +190,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         error: (e, _) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+          ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
         },
         loading: () {},
       );
@@ -228,14 +226,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                 // Title
                 Text(
-                  "Let’s Get Started",
+                  "Bắt đầu ngay",
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Create your new account and find more\nbeautiful destinations",
+                  "Tạo tài khoản mới của bạn và khám phá\nthêm nhiều điểm đến tuyệt đẹp",
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[600],
@@ -246,11 +244,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Name
                 AppTextField(
                   controller: _nameController,
-                  label: "Name",
-                  hint: "Enter your full name",
+                  label: "Tên",
+                  hint: "Nhập tên đầy đủ của bạn",
                   validator:
                       (value) =>
-                          value!.isEmpty ? "Please enter your name" : null,
+                          value!.isEmpty ? "Vui lòng nhập tên của bạn" : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -258,13 +256,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 AppTextField(
                   controller: _emailController,
                   label: "Email",
-                  hint: "Enter your email",
+                  hint: "Nhập email của bạn",
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return "Please enter your email";
+                      return "Vui lòng nhập email";
                     } else if (!value.contains('@')) {
-                      return "Enter a valid email";
+                      return "Nhập email hợp lệ";
                     }
                     return null;
                   },
@@ -274,8 +272,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Password
                 AppTextField(
                   controller: _passwordController,
-                  label: "Password",
-                  hint: "Enter your password",
+                  label: "Mật khẩu",
+                  hint: "Nhập mật khẩu của bạn",
                   isPassword: true,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   validator: (value) {
@@ -289,13 +287,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Confirm Password
                 AppTextField(
                   controller: _confirmPasswordController,
-                  label: "Re-type Password",
-                  hint: "Re-enter your password",
+                  label: "Nhập lại mật khẩu",
+                  hint: "Nhập lại mật khẩu của bạn",
                   isPassword: true,
                   validator:
                       (value) =>
                           value != _passwordController.text
-                              ? "Passwords do not match"
+                              ? "Mật khẩu không khớp"
                               : null,
                 ),
                 const SizedBox(height: 12),
@@ -311,13 +309,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          text: "Accept ",
+                          text: "Tôi chấp nhận ",
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: Colors.black,
                           ),
                           children: [
                             TextSpan(
-                              text: "term of service",
+                              text: "điều khoản dịch vụ",
                               style: const TextStyle(color: Colors.red),
                               recognizer:
                                   TapGestureRecognizer()
@@ -374,7 +372,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                     label: const Text(
-                      'Continue with Google',
+                      'Tiếp tục với Google',
                       style: TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
@@ -401,7 +399,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               color: Colors.white,
                             )
                             : const Text(
-                              "Sign Up",
+                              "Đăng ký",
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.white,
@@ -417,13 +415,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Already have an account? "),
+                    const Text("Đã có tài khoản? "),
                     GestureDetector(
                       onTap: () {
                         context.push('/');
                       },
                       child: const Text(
-                        "Sign In",
+                        "Đăng nhập",
                         style: TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.bold,

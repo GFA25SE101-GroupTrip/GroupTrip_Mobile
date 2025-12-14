@@ -12,6 +12,12 @@ String formatDateToDMYString(String dateString) {
   final formatter = DateFormat('dd/MM/yyyy');
   return formatter.format(date);
 }
+
+String formatDateTimeWithTime(String dateString) {
+  final date = DateTime.parse(dateString);
+  final formatter = DateFormat('HH:mm dd/MM/yyyy');
+  return formatter.format(date);
+}
 String formatCurrency(double value) {
     if (value == 0) return "0đ";
     final str = value.toStringAsFixed(0);
@@ -78,33 +84,38 @@ String formatDateRange(String start, String end) {
 
 String FormatMessageTime(String isoTime) {
   try {
+    // Parse thời gian từ backend (có thể là UTC với Z hoặc local time không có Z)
     final dateTime = DateTime.parse(isoTime);
+    
+    // 🔑 Nếu backend gửi không có 'Z' → đã là local time, dùng trực tiếp
+    // Nếu có 'Z' → là UTC, cần .toLocal() để convert sang múi giờ device
+    final displayTime = dateTime; // Giả sử backend gửi đúng múi giờ Việt Nam (1:26)
+    
+    // So sánh với ngày hôm nay
     final now = DateTime.now();
-    final localTime = dateTime.toLocal();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDate = DateTime(displayTime.year, displayTime.month, displayTime.day);
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
     
-    // Nếu là hôm nay
-    if (localTime.year == now.year && 
-        localTime.month == now.month && 
-        localTime.day == now.day) {
-      return DateFormat('HH:mm').format(localTime);
+    // Hôm nay: hiển thị HH:mm
+    if (messageDate == today) {
+      return '${displayTime.hour.toString().padLeft(2, '0')}:${displayTime.minute.toString().padLeft(2, '0')}';
     }
     
-    // Nếu là hôm qua
-    final yesterday = now.subtract(const Duration(days: 1));
-    if (localTime.year == yesterday.year && 
-        localTime.month == yesterday.month && 
-        localTime.day == yesterday.day) {
-      return 'Hôm qua ${DateFormat('HH:mm').format(localTime)}';
+    // Hôm qua: hiển thị "Hôm qua HH:mm"
+    if (messageDate == yesterday) {
+      return 'Hôm qua ${displayTime.hour.toString().padLeft(2, '0')}:${displayTime.minute.toString().padLeft(2, '0')}';
     }
     
-    // Nếu là năm nay
-    if (localTime.year == now.year) {
-      return DateFormat('dd/MM HH:mm').format(localTime);
+    // Năm nay (nhưng trước hôm qua): hiển thị dd/MM HH:mm
+    if (displayTime.year == now.year) {
+      return '${displayTime.day.toString().padLeft(2, '0')}/${displayTime.month.toString().padLeft(2, '0')} ${displayTime.hour.toString().padLeft(2, '0')}:${displayTime.minute.toString().padLeft(2, '0')}';
     }
     
-    // Khác năm
-    return DateFormat('dd/MM/yyyy HH:mm').format(localTime);
+    // Khác năm: hiển thị đầy đủ dd/MM/yyyy HH:mm
+    return '${displayTime.day.toString().padLeft(2, '0')}/${displayTime.month.toString().padLeft(2, '0')}/${displayTime.year} ${displayTime.hour.toString().padLeft(2, '0')}:${displayTime.minute.toString().padLeft(2, '0')}';
   } catch (e) {
+    print('❌ FormatMessageTime error: $e, isoTime: $isoTime');
     return '';
   }
 }

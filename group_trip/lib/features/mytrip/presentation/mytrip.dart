@@ -1,28 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/mytrip/providers/mytrip_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:group_trip/features/mytrip/data/mytrip_model.dart';
 // departure model not required in this UI file
-
-
-class MyTripsScreen extends ConsumerStatefulWidget {
-  const MyTripsScreen({super.key});
-
-  @override
-  ConsumerState<MyTripsScreen> createState() => _MyTripsScreenState();
-}
+class MyTripsScreen extends ConsumerStatefulWidget { const MyTripsScreen({super.key}); @override ConsumerState<MyTripsScreen> createState() => _MyTripsScreenState(); }
 
 class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
   late String _selectedStatus;
-  
   final List<String> _statusOptions = ['UpComming', 'InProgress', 'Completed'];
 
   @override
   void initState() {
     super.initState();
     _selectedStatus = _statusOptions[0];
-    // Fetch once when the screen is inserted in the tree
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(mytripNotifierProvider.notifier).fetchMyTrips(status: _selectedStatus);
     });
@@ -30,7 +22,9 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // SỬ DỤNG ref ở đây (không truyền vào build)
     final state = ref.watch(mytripNotifierProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chuyến đi của tôi'),
@@ -39,7 +33,6 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
       ),
       body: Column(
         children: [
-          // Status tabs
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             child: SingleChildScrollView(
@@ -47,12 +40,12 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
               child: Row(
                 children: _statusOptions.map((status) {
                   final isSelected = _selectedStatus == status;
-                  final statusLabel = status == 'UpComming' 
-                      ? 'Sắp tới' 
+                  final statusLabel = status == 'UpComming'
+                      ? 'Sắp tới'
                       : status == 'InProgress'
                           ? 'Đang diễn ra'
                           : 'Hoàn thành';
-                  
+
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
@@ -62,7 +55,6 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
                         setState(() {
                           _selectedStatus = status;
                         });
-                        // Fetch trips with new status
                         ref.read(mytripNotifierProvider.notifier).fetchMyTrips(status: status);
                       },
                     ),
@@ -71,7 +63,6 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
               ),
             ),
           ),
-          // Trip list
           Expanded(
             child: state.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -80,9 +71,15 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
                 if (items.isEmpty) return const Center(child: Text('Không có chuyến đi'));
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) => MyTripCard(model: items[index]),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => MyTripCard(
+                  model: items[index],
+                  onRejoinSuccess: () {
+                    // Refetch current status when rejoin succeeds
+                    ref.read(mytripNotifierProvider.notifier).fetchMyTrips(status: _selectedStatus);
+                  },
+                ),
                 );
               },
             ),
@@ -93,9 +90,11 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
   }
 }
 
-class MyTripCard extends StatelessWidget {
+
+class MyTripCard extends ConsumerWidget {
   final MyTripModel model;
-  const MyTripCard({super.key, required this.model});
+  final VoidCallback? onRejoinSuccess;
+  const MyTripCard({super.key, required this.model, this.onRejoinSuccess});
 
   String formatRange(DateTime s, DateTime e) {
     if (s.year == 1970 || e.year == 1970) return 'Ngày không xác định';
@@ -115,43 +114,100 @@ class MyTripCard extends StatelessWidget {
   }
 
   // Map backend status string to a friendly label and color
- String statusLabel(String s) {
-  final low = s.toLowerCase();
+  String statusLabel(String s) {
+    final low = s.toLowerCase();
 
-  if (low.contains('ready')) return 'Đợi chốt nhóm';
-  if (low.contains('deposit') || low.contains('full')) return 'Đang đặt cọc';
-  if (low.contains('fullpayment')) return 'Đang thanh toán';
-  if (low.contains('inprogress')) return 'Đang diễn ra';
-  if (low.contains('completed')) return 'Hoàn thành';
-  if (low.contains('canceled') || low.contains('cancel')) return 'Đã hủy';
+    if (low.contains('ready')) return 'Đợi chốt nhóm';
+    if (low.contains('deposit') || low.contains('full')) return 'Đang đặt cọc';
+    if (low.contains('fullpayment')) return 'Đang thanh toán';
+    if (low.contains('inprogress')) return 'Đang diễn ra';
+    if (low.contains('completed')) return 'Hoàn thành';
+    if (low.contains('canceled') || low.contains('cancel')) return 'Đã hủy';
 
-  return s;
-}
+    return s;
+  }
 
-Color statusColor(String s) {
-  final low = s.toLowerCase();
+  // Map currentUserStatus to friendly label
+  String currentUserStatusLabel(String status) {
+    final low = status.toLowerCase();
+    
+    if (low.contains('active')) return 'Đã tham gia';
+    if (low.contains('inactive')) return 'Đã rời nhóm';
+    if (low.contains('deposit')) return 'Đã đặt cọc';
+    if (low.contains('fullpayment')) return 'Đã thanh toán';
+    if (low.contains('refund')) return 'Được hoàn tiền';
+    if (low.contains('refundeligible')) return 'Được trả cọc';
+    
+    return status;
+  }
 
-  if (low.contains('ready')) return Colors.orange;               // Đợi chốt nhóm
-  if (low.contains('deposit') || low.contains('full')) return Colors.blue; // Đang đặt cọc
-  if (low.contains('fullpayment')) return Colors.teal;           // Đang thanh toán
-  if (low.contains('inprogress')) return Colors.green;           // Đang diễn ra
-  if (low.contains('completed')) return Colors.grey;             // Hoàn thành
-  if (low.contains('canceled') || low.contains('cancel')) return Colors.redAccent; // Đã hủy
+  // Map currentUserStatus to color
+  Color currentUserStatusColor(String status) {
+    final low = status.toLowerCase();
+    
+    if (low.contains('active')) return Colors.green;
+    if (low.contains('inactive')) return Colors.red;
+    if (low.contains('deposit')) return Colors.orange;
+    if (low.contains('fullpayment')) return Colors.blue;
+    if (low.contains('refund')) return Colors.purple;
+    if (low.contains('refundeligible')) return Colors.amber;
+    
+    return Colors.grey;
+  }
 
-  return Colors.blueGrey; // fallback
-}
+  Future<void> _handleRejoinTrip(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(mytripRejoinTripProvider(model.departureId).future);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tham gia chuyến đi thành công'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Call the callback to refetch trips with current status
+        onRejoinSuccess?.call();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: $e'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
+  Color statusColor(String s) {
+    final low = s.toLowerCase();
+
+    if (low.contains('ready')) return Colors.orange;               // Đợi chốt nhóm
+    if (low.contains('deposit') || low.contains('full')) return Colors.blue; // Đang đặt cọc
+    if (low.contains('fullpayment')) return Colors.teal;           // Đang thanh toán
+    if (low.contains('inprogress')) return Colors.green;           // Đang diễn ra
+    if (low.contains('completed')) return Colors.grey;             // Hoàn thành
+    if (low.contains('canceled') || low.contains('cancel')) return Colors.redAccent; // Đã hủy
+
+    return Colors.blueGrey; // fallback
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final start = model.startDate;
     final end = model.endDate;
     final participants = model.numberMemberIn;
     final maxUsers = model.maxUsers;
-    final isUserJoined = model.currentUserStatus.toLowerCase() == 'active';
+    final isUserJoined = model.currentUserStatus.toLowerCase() == 'active' || model.currentUserStatus.toLowerCase() == 'deposit' || model.currentUserStatus.toLowerCase() == 'fullpayment'  || model.currentUserStatus.toLowerCase() == 'refund';
     final isCanceled = model.cancelReason != null && model.cancelReason!.isNotEmpty;
-
+    final isUserInactive = model.currentUserStatus.toLowerCase() == 'inactive';
+  
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.hardEdge,
@@ -222,28 +278,83 @@ Color statusColor(String s) {
                       Text('$participants/$maxUsers người', style: theme.textTheme.bodySmall),
                       const SizedBox(width: 12),
                       // User status indicator
-                      if (isUserJoined)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text('Đã tham gia', 
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.green, fontSize: 11, fontWeight: FontWeight.w600),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isUserInactive
+                              ? Colors.red.withOpacity(0.12)
+                              : currentUserStatusColor(model.currentUserStatus).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isUserInactive
+                              ? 'Đã rời nhóm'
+                              : currentUserStatusLabel(model.currentUserStatus),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isUserInactive
+                                ? Colors.red
+                                : currentUserStatusColor(model.currentUserStatus),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      const Spacer(),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          minimumSize: const Size(100, 42),
-                        ),
-                        onPressed: () {},
-                        child: const Text('Chi tiết', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                       ),
+                      const Spacer(),
+                      // Button logic based on user status and departure status
+                     if (isUserJoined || model.departureStatus.toLowerCase().contains('cancel'))
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: model.departureStatus.toLowerCase().contains('cancel') 
+                                ? Colors.grey.shade600
+                                : Colors.blue.shade600,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            minimumSize: const Size(100, 42),
+                          ),
+                          onPressed: () {
+                            // Navigate based on departure status
+                            final status = model.departureStatus.toLowerCase();
+                            if (status.contains('ready')) {
+                              context.push(
+                                '/pending-process/${model.departureId}',
+                                extra: model.toJson(),
+                              );
+                            } else if (status.contains('inprogress') || status.contains('pending')) {
+                              context.push(
+                                '/inprogress_process/${model.departureId}',
+                                extra: model.toJson(),
+                              );
+                            } else if (status.contains('completed')) {
+                              context.push(
+                                '/complete_process/${model.departureId}',
+                                extra: model.toJson(),
+                              );
+                            } else if (status.contains('deposit') || status.contains('fullpayment') || status.contains('full')) {
+                              context.push(
+                                '/deposit_process/${model.departureId}',
+                                extra: model.toJson(),
+                              );
+                            } else if (status.contains('canceled') || status.contains('cancel')) {
+                              context.push(
+                                '/canceled_process/${model.departureId}',
+                                extra: model.toJson(),
+                              );
+                            }
+                          },
+                          child: const Text('Chi tiết', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                        )
+                      else if (model.departureStatus.toLowerCase().contains('ready'))
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade600,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            minimumSize: const Size(100, 42),
+                          ),
+                          onPressed: () => _handleRejoinTrip(context, ref),
+                          child: const Text('Tham gia', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                        ),
+                      
                     ],
                   ),
                   // Show cancel reason if trip is canceled

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart' hide TabBar;
-import 'package:group_trip/features/trip/presentation/widgets/process/cancel/cancel_button_action.dart';
 import 'package:group_trip/features/trip/presentation/widgets/process/cancel/cancel_contact.dart';
 import 'package:group_trip/features/trip/presentation/widgets/process/cancel/cancel_notice.dart';
 import 'package:group_trip/features/trip/presentation/widgets/process/cancel/cancel_policy.dart';
@@ -18,27 +17,18 @@ class CancelBody extends StatefulWidget {
 class _CancelBodyState extends State<CancelBody> {
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Container(
-                  margin: const EdgeInsets.only(top: 280),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF8F7F5),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(28),
-                      topRight: Radius.circular(28),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8F7F5),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
                         SizedBox(height: 12),
                         CancelNotice(),
                         SizedBox(height: 20),
@@ -50,14 +40,6 @@ class _CancelBodyState extends State<CancelBody> {
                         SizedBox(height: 160),
                       ],
                     ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        const CancelBottomActions(),
-      ],
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 class CreateReportModel {
+  final String userId;
   final String? targetId;
   final String assignToRole;
   final String type;
@@ -16,6 +17,7 @@ class CreateReportModel {
   final List<File>? pdfFile;
 
   CreateReportModel({
+    required this.userId,
     this.targetId,
     required this.assignToRole,
     required this.type,
@@ -31,6 +33,7 @@ class CreateReportModel {
     final formData = FormData();
 
     // Các field dạng string
+    formData.fields.add(MapEntry("UserId", userId));
     formData.fields.add(MapEntry("TargetId", targetId ?? ''));
     formData.fields.add(MapEntry("AssignToRole", assignToRole));
     formData.fields.add(MapEntry("Type", type));

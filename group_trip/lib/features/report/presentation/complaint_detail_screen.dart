@@ -117,10 +117,13 @@ class ComplaintDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          body: RefreshIndicator(
+            onRefresh: () async {
+              await ref.refresh(reportDetailProvider(reportId).future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 // status moved to AppBar
 
@@ -136,9 +139,8 @@ class ComplaintDetailScreen extends ConsumerWidget {
                       if (report.createdTime != null)
                         DetailRow(
                           label: 'Ngày tạo:',
-                          value: report.createdTime!,
+                          value: formatDateTimeWithTime(report.createdTime!),
                         ),
-                      if (resp != null) DetailRow(label: 'Cập nhật:', value: resp.createTime),
                       const SizedBox(height: 10),
                       if (report.tripId != null || report.tripName != null)
                         Row(
@@ -323,26 +325,7 @@ class ComplaintDetailScreen extends ConsumerWidget {
                                         ),
                                       );
                                     }
-                                    // else {
-                                    //   final uri = Uri.parse(a);
-                                    //   await Navigator.of(context).push(MaterialPageRoute(
-                                    //     fullscreenDialog: true,
-                                    //     builder: (_) => Scaffold(
-                                    //       appBar: AppBar(
-                                    //         title: const Text('Mở tệp đính kèm'),
-                                    //         leading: IconButton(
-                                    //           icon: const Icon(Icons.close),
-                                    //           onPressed: () => Navigator.of(context).pop(),
-                                    //         ),
-                                    //       ),
-                                    //       body: WebViewWidget(
-                                    //         controller: WebViewController()
-                                    //           ..setJavaScriptMode(JavaScriptMode.unrestricted)
-                                    //           ..loadRequest(uri),
-                                    //       ),
-                                    //     ),
-                                    //   ));
-                                    // }
+                                
                                   },
                                   child:
                                       isImage
@@ -407,14 +390,7 @@ class ComplaintDetailScreen extends ConsumerWidget {
                                 ],
                               ),
                             ),
-                            if (resp.createTime.isNotEmpty)
-                              Text(
-                                formatDateToDMYString(resp.createTime),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
+                            
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -547,32 +523,33 @@ class ComplaintDetailScreen extends ConsumerWidget {
 
                 const SizedBox(height: 20),
                 // Action buttons (keep present but you can hook them up)
-                SizedBox(
-                  width: double.infinity,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E90FF),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                if (report.status.trim().toLowerCase() != 'completed')
+                  SizedBox(
+                    width: double.infinity,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E90FF),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          onPressed: () {},
-                          child: Text(
-                            'Cancel',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                            onPressed: () {},
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),

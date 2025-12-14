@@ -19,6 +19,5 @@ class ReportRepository {
     return await remoteDataSource.submitReport(report);
   }  
 
-
   // Define methods for reporting functionality here
 }

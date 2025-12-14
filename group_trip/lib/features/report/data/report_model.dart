@@ -1,57 +1,73 @@
-import 'package:group_trip/features/report/data/report_response.dart';
-
 class ReportModel {
   final String id;
   final String userId;
-  final String targetId;
+  final String? targetId;
   final String title;
   final String assignToRole;
   final String status;
   final String? receiverName;
   final String? tripId;
   final String? tripName;
-  final String? createTime;
+  final String? createdTime;
+
+  // Optional fields from JSON (nên có)
+  final String? senderName;
+  final String? senderAvatar;
+  final String? receiverAvatar;
+  final String? type;
+
   ReportModel({
     required this.id,
     required this.userId,
-    required this.targetId,
+    this.targetId,
     required this.title,
     required this.assignToRole,
     required this.status,
-    required this.receiverName,
+    this.receiverName,
     this.tripId,
     this.tripName,
-    this.createTime,
+    this.createdTime,
+    this.senderName,
+    this.senderAvatar,
+    this.receiverAvatar,
+    this.type,
   });
+
   factory ReportModel.fromJson(Map<String, dynamic> json) {
     return ReportModel(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      targetId: json['targetId'] as String,
-      assignToRole: json['assignToRole'] as String,
-      title: json['title'] as String,
-      status: json['status'] as String,
-      receiverName: json['receiverName'] as String,
-      tripId: json['tripId'] as String?,
-      tripName: json['tripName'] as String?,
-      createTime: json['createTime'] as String?,
+      id: json['id'] ?? "",
+      userId: json['userId'] ?? "",
+      targetId: json['targetId'],
+      title: json['title'] ?? "",
+      assignToRole: json['assignToRole'] ?? "",
+      status: json['status'] ?? "",
+      receiverName: json['receiverName'],
+      tripId: json['tripId'],
+      tripName: json['tripName'],
+      createdTime: json['createdTime'], // đúng key
+      senderName: json['senderName'],
+      senderAvatar: json['senderAvatar'],
+      receiverAvatar: json['receiverAvatar'],
+      type: json['type'],
     );
   }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'userId': userId,
       'targetId': targetId,
       'title': title,
-      'status': status,
       'assignToRole': assignToRole,
+      'status': status,
       'receiverName': receiverName,
       'tripId': tripId,
       'tripName': tripName,
-      'createTime': createTime,
+      'createdTime': createdTime,
+      'senderName': senderName,
+      'senderAvatar': senderAvatar,
+      'receiverAvatar': receiverAvatar,
+      'type': type,
     };
   }
 }
-
-
-

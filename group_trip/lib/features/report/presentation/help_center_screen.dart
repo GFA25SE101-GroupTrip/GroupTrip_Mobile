@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
 import 'package:group_trip/features/report/presentation/complaint_detail_screen.dart';
 import 'package:group_trip/features/report/providers/report_provider.dart';
@@ -52,46 +53,16 @@ class HelpCenterScreen extends ConsumerWidget {
           )
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.refresh(reportListProvider(userId).future);
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             // Search
-           
-            const SizedBox(height: 20),
-
-            Text(
-              'Liên hệ hỗ trợ',
-              style: GoogleFonts.inter(
-                  fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 10),
-            _buildSupportCard(
-              context,
-              icon: Icons.note_add_outlined,
-              title: 'Submit a Ticket',
-              subtitle: 'Gửi yêu cầu hỗ trợ chi tiết',
-              color: Colors.blue.shade50,
-              iconColor: Colors.blue,
-            ),
-            _buildSupportCard(
-              context,
-              icon: Icons.phone_in_talk,
-              title: 'Hotline',
-              subtitle: '1900-1234 | support@tripapp.com',
-              color: Colors.red.shade50,
-              iconColor: Colors.red,
-            ),
-
             const SizedBox(height: 25),
-            Text(
-              'Yêu cầu gần đây',
-              style: GoogleFonts.inter(
-                  fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 10),
-
              TextField(
               decoration: InputDecoration(
                 hintText: 'Tìm kiếm yêu cầu hỗ trợ',
@@ -117,11 +88,12 @@ class HelpCenterScreen extends ConsumerWidget {
                   );
                 }
                 return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: reports.map((report) {
                     return _buildTicketItem(
                       title: report.title,
                       status: report.status,
-                      date: report.createTime ?? '',
+                      date: report.createdTime ?? '',
                       receiver: report.receiverName,
                       related: report.tripName,
                       onTap: () {
@@ -135,9 +107,7 @@ class HelpCenterScreen extends ConsumerWidget {
                       statusColor: report.status == 'Resolved'
                           ? Colors.green
                           : Colors.amber,
-                          );
-
-
+                    );
                   }).toList(),
                 );
               },
@@ -153,10 +123,20 @@ class HelpCenterScreen extends ConsumerWidget {
               ),
             ),
            
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+  }
+
+  String _formatDate(String dateString) {
+    try {
+      final dateTime = DateTime.parse(dateString);
+      final formatter = DateFormat('dd/MM/yyyy', 'vi_VN');
+      return formatter.format(dateTime);
+    } catch (e) {
+      return dateString;
+    }
   }
 
   Widget _buildSupportCard(BuildContext context,
@@ -250,17 +230,17 @@ class HelpCenterScreen extends ConsumerWidget {
             ),
             if (receiver != null) ...[
               const SizedBox(height: 4),
-              Text('Receiver: $receiver',
+              Text('Gửi tới: $receiver',
                   style:
                       GoogleFonts.inter(fontSize: 13, color: Colors.grey[700])),
             ],
             if (related != null) ...[
-              Text('Related Trip: $related',
+              Text('Chuyến đi liên quan: $related',
                   style:
                       GoogleFonts.inter(fontSize: 13, color: Colors.grey[700])),
             ],
             const SizedBox(height: 6),
-            Text(date,
+            Text(_formatDate(date),
                 style:
                     GoogleFonts.inter(fontSize: 12, color: Colors.grey[500])),
           ],

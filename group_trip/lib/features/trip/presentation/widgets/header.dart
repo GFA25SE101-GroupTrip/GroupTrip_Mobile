@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:group_trip/features/notifications/providers/notificationProvider.dart';
 
-class Header extends StatelessWidget {
+class Header extends ConsumerWidget {
   const Header({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCountAsync = ref.watch(unreadNotificationCountProvider);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -31,7 +36,7 @@ class Header extends StatelessWidget {
           ],
         ),
 
-        // 🔔 Notification icon with red dot
+        // 🔔 Notification icon with unread count badge
         Stack(
           clipBehavior: Clip.none,
           children: [
@@ -42,19 +47,50 @@ class Header extends StatelessWidget {
                 color: Colors.black87,
               ),
               onPressed: () {
-                // TODO: handle notification click
+                GoRouter.of(context).go('/notification');
               },
             ),
-            // Red dot
-            Positioned(
-              right: 8,
-              top: 10,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
+            // Red dot indicator for unread notifications
+            unreadCountAsync.when(
+              data: (unreadCount) {
+                if (unreadCount == 0) {
+                  return const SizedBox.shrink();
+                }
+                return Positioned(
+                  right: 8,
+                  top: 10,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                );
+              },
+              loading: () => Positioned(
+                right: 8,
+                top: 10,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Colors.grey,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              error: (_, __) => Positioned(
+                right: 8,
+                top: 10,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),

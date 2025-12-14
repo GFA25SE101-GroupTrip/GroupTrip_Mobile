@@ -5,14 +5,15 @@ class DepositHeader extends StatelessWidget {
   final String title;
   final String remainingTime;
   final String statusLabel;
+  
 
   const DepositHeader({
     super.key,
     required this.imageUrl,
     required this.title,
-    this.statusLabel = 'Deposit paid',
-    this.remainingTime = '7d 14h left',
-  });
+    this.statusLabel = 'Đang đặt cọc',
+    this.remainingTime = 'Chưa bắt đầu',
+    });
 
   @override
   Widget build(BuildContext context) {
@@ -58,13 +59,7 @@ class DepositHeader extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildBadge(
-                    label: statusLabel,
-                    bgColor: const Color(0xFFDCFCE7),
-                    textColor: Colors.black87,
-                    icon: Icons.circle,
-                    iconColor: Colors.green,
-                  ),
+                  _buildStatusBadge(statusLabel),
                   _buildBadge(
                     label: remainingTime,
                     bgColor: const Color(0xFFFFE3E3),
@@ -126,6 +121,46 @@ class DepositHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    // Map status to Vietnamese label and colors
+    String label;
+    Color bgColor;
+    Color textColor;
+    Color iconColor;
+
+    final low = status.toLowerCase();
+    
+    if (low.contains('deposit')) {
+      label = 'Đang đặt cọc';
+      bgColor = const Color(0xFFDCFCE7);
+      textColor = Colors.green;
+      iconColor = Colors.green;
+    } else if (low.contains('fullpayment')) {
+      label = 'Đang thanh toán';
+      bgColor = const Color(0xFFFFE3D5);
+      textColor = Colors.orange;
+      iconColor = Colors.orange;
+    } else if (low.contains('full')) {
+      label = 'Đang đợi thanh toán';
+      bgColor = const Color(0xFFFEF3C7);
+      textColor = const Color(0xFFF59E0B);
+      iconColor = const Color(0xFFF59E0B);
+    } else {
+      label = status;
+      bgColor = const Color(0xFFDCFCE7);
+      textColor = Colors.green;
+      iconColor = Colors.green;
+    }
+
+    return _buildBadge(
+      label: label,
+      bgColor: bgColor,
+      textColor: textColor,
+      icon: Icons.circle,
+      iconColor: iconColor,
     );
   }
 }

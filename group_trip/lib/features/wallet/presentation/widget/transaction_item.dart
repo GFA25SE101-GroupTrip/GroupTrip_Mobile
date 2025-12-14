@@ -10,35 +10,40 @@ class TransactionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDeposit = transaction.type == 1;
-    final isExpense = transaction.type == 2;
-    final isRefund = transaction.type == 3;
-    final isTopup = transaction.type == 4;
-    final icon = isDeposit
-        ? Icons.arrow_downward_rounded
-        : isExpense
-            ? Icons.arrow_upward_rounded
-            : isTopup
-                ? Icons.account_balance_wallet_rounded
-                : Icons.refresh_rounded;
     
+    // Determine transaction type
+    final isDeposit = transaction.type == 'Deposit';
+    final isTopup = transaction.type == 'Topup';
+    final isFullPayment = transaction.type == 'FullPayment';
+    final isRefund = transaction.type == 'Refund';
 
-    final color = isDeposit
-        ? Colors.green
-        : isExpense
-            ? Colors.red
-            : isTopup
-                ? Colors.blue
-                : Colors.orange;
+    // Icon selection
+    final icon = isDeposit || isFullPayment
+        ? Icons.arrow_upward_rounded
+        : isTopup
+            ? Icons.account_balance_wallet_rounded
+            : Icons.refresh_rounded;
 
-    final amountPrefix = isDeposit
-        ? '+'
-        : isExpense
-            ? '-'
-            : '+';
+    // Color selection
+    final color = isDeposit || isFullPayment
+        ? Colors.red
+        : isTopup
+            ? Colors.blue
+            : Colors.green;
+
+    // Amount prefix (+ for incoming, - for outgoing)
+    final amountPrefix = isTopup || isRefund ? '+' : '-';
 
     final amountText =
         '$amountPrefix${NumberFormat('#,###').format(transaction.totalAmount)}đ';
+
+    // Status translation
+    final statusText = transaction.status == 'Pending'
+        ? 'Chờ xử lý'
+        : 'Thành công';
+    final statusColor = transaction.status == 'Pending'
+        ? Colors.orange
+        : Colors.green;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
@@ -77,7 +82,7 @@ class TransactionItem extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   DateFormat('dd/MM/yyyy HH:mm')
-                      .format(transaction.createdTime),
+                      .format(transaction.createdTime.add(Duration(hours: 7))),
                   style: theme.textTheme.bodyMedium
                       ?.copyWith(color: Colors.grey[600], fontSize: 14),
                 ),
@@ -97,11 +102,9 @@ class TransactionItem extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                transaction.status,
+                statusText,
                 style: TextStyle(
-                  color: transaction.status == 'Pending'
-                      ? Colors.orange
-                      : Colors.green,
+                  color: statusColor,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),

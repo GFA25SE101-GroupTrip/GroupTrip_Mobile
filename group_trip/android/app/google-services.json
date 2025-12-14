@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "390883879472",
+    "project_id": "grouptrip-fa",
+    "storage_bucket": "grouptrip-fa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:390883879472:android:361fc0737456c1ec449bf5",
+        "android_client_info": {
+          "package_name": "com.example.group_trip"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaDJQZAsyaWSXXyfaGYOvbUgNn3ZZ0_8M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,18 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:group_trip/core/config/secure_storage_service.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
 import 'package:group_trip/core/signalr/signalr_provider.dart';
-import 'package:group_trip/core/utils/dataFormat.dart';
 import 'package:group_trip/features/chat/data/chat_message.dart';
-import 'package:group_trip/features/chat/presentation/widgets/incomingImage.dart';
-import 'package:group_trip/features/chat/presentation/widgets/incomingText.dart';
-import 'package:group_trip/features/chat/presentation/widgets/incomingTripCard.dart';
-import 'package:group_trip/features/chat/presentation/widgets/outgoindImage.dart';
-import 'package:group_trip/features/chat/presentation/widgets/outgoingText.dart';
+import 'package:group_trip/features/chat/data/chat_model.dart';
 import 'package:group_trip/features/chat/providers/chat_provider.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:group_trip/features/chat/presentation/widgets/chat_message_list.dart';
+import 'package:group_trip/features/chat/presentation/widgets/chat_input_bar.dart';
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
   final String chatId;
@@ -23,17 +19,16 @@ class ChatDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
-  final ImagePicker _picker = ImagePicker();
   final TextEditingController _textController = TextEditingController();
   File? _pickedImage;
   final ScrollController _scrollController = ScrollController();
-  final GlobalKey _inputBarKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _connectSignalR();
+      _markMessagesAsRead(); // 📍 Đánh dấu tin đã đọc
     });
     WidgetsBinding.instance.addObserver(_KeyboardObserver(this));
   }
@@ -46,29 +41,41 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     super.dispose();
   }
 
+  /// 📍 Gọi server để đánh dấu tin nhắn đã đọc
+  Future<void> _markMessagesAsRead() async {
+    try {
+      final signalR = ref.read(signalRControllerProvider);
+      await signalR.markMessagesAsRead(widget.chatId);
+      print('✅ Marked messages as read for chat ${widget.chatId}');
+    } catch (e) {
+      print('❌ Error marking messages as read: $e');
+    }
+  }
+
   Future<void> _connectSignalR() async {
     try {
       final user = await ref.read(userFromStorageProvider.future);
       final token = user?.accessToken;
       if (token != null && token.isNotEmpty) {
-        await ref.read(signalRControllerProvider).connect(token, widget.chatId);
+        final signalR = ref.read(signalRControllerProvider);
+
+        // 🔄 Thêm chatId vào danh sách join
+        signalR.addChatId(widget.chatId);
+
+        // Nếu đã connected, join ngay
+        if (signalR.isConnected()) {
+          await signalR.joinChatDirectly(widget.chatId);
+          print('✅ Joined chat ${widget.chatId}');
+        }
+
+        await signalR.connect(token, widget.chatId);
       }
     } catch (e) {
       print('SignalR connect error: $e');
     }
   }
 
-  Future<void> _pickImage() async {
-    final file = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
-    if (file != null) {
-      setState(() => _pickedImage = File(file.path));
-    }
-  }
-
-  void _openImagePreview({String? networkUrl, String? filePath}) {
+  void _openImagePreview(String? networkUrl, String? filePath) {
     showDialog(
       context: context,
       builder:
@@ -87,30 +94,48 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     ).then((_) => setState(() {})); // fix lỗi hình bị mờ khi quay lại
   }
 
- void _scrollToBottom({bool animate = true}) {
-  if (!_scrollController.hasClients) return;
+  void _scrollToBottom({bool animate = true}) {
+    if (!_scrollController.hasClients) return;
+    
+    // Đảm bảo có dữ liệu để scroll
+    if (_scrollController.position.maxScrollExtent == 0) {
+      print('⚠️ No content to scroll');
+      return;
+    }
 
-  // Với reverse: true → scroll về 0 là xuống dưới cùng
-  if (animate) {
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
-  } else {
-    _scrollController.jumpTo(0);
+    // Với reverse: false → scroll về maxScrollExtent là xuống dưới cùng (tin nhắn mới nhất)
+    try {
+      if (animate) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    } catch (e) {
+      print('⚠️ Scroll error: $e');
+    }
   }
-}
+
+  /// 🔄 Refetch tin nhắn khi pull-to-refresh
+  Future<void> _refreshMessages() async {
+    try {
+      // Invalidate provider để force refetch từ server
+      ref.refresh(chatDetailProvider(widget.chatId));
+      await Future.delayed(const Duration(milliseconds: 500));
+      print('✅ Refreshed messages for chat ${widget.chatId}');
+    } catch (e) {
+      print('❌ Error refreshing messages: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final chatAsync = ref.watch(chatDetailProvider(widget.chatId));
     final currentUserId =
         ref.watch(userFromStorageProvider).asData?.value?.userId;
-
-    // Incoming SignalR messages are handled by ChatDetailNotifier (it listens to the
-    // SignalR controller stream). Do not duplicate handling here to avoid
-    // duplicate message inserts.
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -157,157 +182,106 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         error: (err, _) => Center(child: Text('Lỗi: $err')),
         data: (chat) {
           final messages = chat.messages ?? [];
+          print("ORDER:");
+          for (var m in messages) print(m.createdTime);
+          
+          // 🔄 Scroll tới bottom khi có tin nhắn mới
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom(animate: false);
+          });
 
-          return Column(
-            children: [
-              Expanded(
-                child:
-                    messages.isEmpty
-                        ? const Center(child: Text("Chưa có tin nhắn"))
-                        : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.only(
-                            left: 16,
-                            right: 16,
-                            top: 16,
-                            bottom: 100, // để chừa chỗ cho input bar + keyboard
+          // Check if user is inactive
+          return FutureBuilder<bool>(
+            future: _checkUserInactiveStatus(chat),
+            builder: (context, snapshot) {
+              final isUserInactive = snapshot.data ?? false;
+
+              return Column(
+                children: [
+                  // Show blocking message if user is inactive
+                  if (isUserInactive)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      color: Colors.orange.shade50,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.orange.shade700,
+                            size: 24,
                           ),
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            // Vì reverse: true → index 0 là tin nhắn mới nhất
-                            final m = messages[index];
-                            final isMine = m.senderId == currentUserId;
-
-                            return _buildMessageWidget(m, isMine, chat.chatImg);
-                          },
-                        ),
-              ),
-              _buildInputBar(currentUserId ?? ''),
-            ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Bạn đã rời khỏi tin nhắn này và không cho phép nhắn tin và không cho phép xem tin nhắn mới',
+                              style: TextStyle(
+                                color: Colors.orange.shade700,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  Expanded(
+                    child: ChatMessageList(
+                      messages: messages,
+                      currentUserId: currentUserId,
+                      groupAvatar: chat.chatImg,
+                      scrollController: _scrollController,
+                      onRefresh: _refreshMessages,
+                      onImageTap: _openImagePreview,
+                      chatMembers: chat.chatMembers,
+                    ),
+                  ),
+                  
+                  // Show input only if user is active
+                  if (!isUserInactive)
+                    ChatInputBar(
+                      senderId: currentUserId ?? '',
+                      textController: _textController,
+                      pickedImage: _pickedImage,
+                      onSendMessage: () => _sendMessage(currentUserId ?? ''),
+                      onImagePicked: (file) => setState(() => _pickedImage = file),
+                      onTextChanged: (_) {},
+                      onRemoveImage: () => setState(() => _pickedImage = null),
+                    ),
+                ],
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget _buildMessageWidget(ChatMessage m, bool isMine, String? groupAvatar) {
-    final formattedTime = FormatMessageTime(m.createdTime);
-    switch (m.messageType) {
-      case 'image':
-        return GestureDetector(
-          onTap:
-              () => _openImagePreview(
-                networkUrl: isMine ? null : m.attachmentUrl,
-                filePath: isMine ? m.attachmentUrl : null,
-              ),
-          child:
-              isMine
-                  ? OutgoingImage(filePath: m.attachmentUrl, time: formattedTime)
-                  : IncomingImage(
-                    name: m.senderName.isNotEmpty ? m.senderName : 'Người gửi',
-                    imageUrl: m.attachmentUrl,
-                    time: formattedTime,
-                  ),
-        );
+  Future<bool> _checkUserInactiveStatus(ChatModel chat) async {
+    try {
+      final secureStorage = SecureStorageService();
+      final user = await secureStorage.getUserResponseFromJson();
+      final currentUserId = user?.userId;
 
-      case 'Normal':
-      default:
-        return isMine
-            ? OutgoingText(message: m.content, time: formattedTime,)
-            : IncomingText(
-              avatar:
-                  groupAvatar ?? "https://i.pravatar.cc/150?u=${m.senderId}",
-              name: m.senderName.isNotEmpty ? m.senderName : 'Người gửi',
-              message: m.content,
-              time: formattedTime,
-            );
+      if (currentUserId == null || chat.chatMembers == null || chat.chatMembers!.isEmpty) {
+        return false;
+      }
+
+      // Check if current user is in chatMembers
+      final userMember = chat.chatMembers!.firstWhere(
+        (member) => member.travellerId == currentUserId,
+        orElse: () => throw Exception('User not found in chat members'),
+      );
+
+      print('Member status for user $currentUserId in chat ${chat.id}: ${userMember.memberStatus}');
+      return userMember.memberStatus?.toLowerCase() == 'inactive';
+    } catch (e) {
+      print('Error checking user inactive status: $e');
+      return false;
     }
-  }
-
-  Widget _buildInputBar(String senderId) {
-    return SafeArea(
-      child: Container(
-        key: _inputBarKey,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade300)),
-        ),
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: _pickImage,
-              icon: const Icon(Icons.image_outlined, color: Colors.blue),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_pickedImage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              _pickedImage!,
-                              height: 100,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: GestureDetector(
-                              onTap: () => setState(() => _pickedImage = null),
-                              child: const CircleAvatar(
-                                radius: 14,
-                                backgroundColor: Colors.black54,
-                                child: Icon(
-                                  Icons.close,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  TextField(
-                    controller: _textController,
-                    decoration: InputDecoration(
-                      hintText: "Nhập tin nhắn...",
-                      filled: true,
-                      fillColor: Colors.grey.shade200,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendMessage(senderId),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.blue,
-              child: IconButton(
-                icon: const Icon(Icons.send, color: Colors.white),
-                onPressed: () => _sendMessage(senderId),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _sendMessage(String senderId) async {
@@ -316,30 +290,19 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
     final isImage = _pickedImage != null;
 
-    final localMessage = ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(), // BẮT BUỘC CÓ ID
-      chatId: widget.chatId,
-      senderId: senderId,
-      senderName: "Bạn",
-      content: isImage ? '' : text,
-      attachmentUrl: isImage ? _pickedImage!.path : '',
-      messageType: isImage ? 'image' : 'Normal',
-      createdTime: DateTime.now().toUtc().toIso8601String(),
-      isMine: true,
-      userRead: const [],
-    );
+    // ⏰ Lấy thời gian hiện tại (UTC format như server gửi)
+    final messageTime =
+        DateTime.now()
+            .toUtc()
+            .toIso8601String(); // Ví dụ: "2025-12-10T22:45:11.676284Z"
 
-    // Optimistic UI
-    ref
-        .read(chatDetailProvider(widget.chatId).notifier)
-        .addMessageLocally(localMessage);
     _textController.clear();
     setState(() => _pickedImage = null);
-    _scrollToBottom();
 
     final payload = {
       'content': isImage ? '' : text,
       'messageType': isImage ? 'image' : 'Normal',
+      'createdTime': messageTime, // ⏰ Gửi lên UTC format
       if (isImage) 'attachmentUrl': _pickedImage?.path,
     };
 
@@ -361,6 +324,9 @@ class _KeyboardObserver extends WidgetsBindingObserver {
 
   @override
   void didChangeMetrics() {
-    Future.delayed(const Duration(milliseconds: 100), () => state._scrollToBottom());  
-}
+    Future.delayed(
+      const Duration(milliseconds: 100),
+      () => state._scrollToBottom(),
+    );
+  }
 }

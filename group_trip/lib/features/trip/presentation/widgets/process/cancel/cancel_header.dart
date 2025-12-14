@@ -4,12 +4,14 @@ class CancelHeader extends StatelessWidget {
   final String imageUrl;
   final String title;
   final String statusLabel;
+  final String cancelReason;
 
   const CancelHeader({
     super.key,
     required this.imageUrl,
     required this.title,
     this.statusLabel = 'Canceled',
+    this.cancelReason = 'Chưa có lý do hủy',
   });
 
   @override
@@ -78,6 +80,30 @@ class CancelHeader extends StatelessWidget {
                       offset: Offset(0, 1.2),
                       blurRadius: 3,
                       color: Colors.black26,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.red.shade700, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Lý do hủy: $cancelReason',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),

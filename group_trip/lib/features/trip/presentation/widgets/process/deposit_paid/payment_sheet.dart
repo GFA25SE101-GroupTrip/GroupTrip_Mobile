@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/core/utils/dataFormat.dart';
+import 'package:group_trip/features/mytrip/providers/mytrip_provider.dart';
 import 'package:group_trip/features/trip/data/trip_departure_model.dart';
 import 'package:group_trip/features/trip/data/trip_model.dart';
 import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
@@ -9,32 +10,32 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:group_trip/features/trip/providers/tripProvider.dart';
 
 class PaymentSheet extends ConsumerStatefulWidget {
-  final String tripImage;
-  final String tripTitle;
-  final String tripDepartureDate;
-  final String totalAmount;
-  final String balance;
-  final String deposit;
-  final String indebt;
-  final int payAmount;
+  final String? tripImage;
+  final String? tripTitle;
+  final String? tripDepartureDate;
+  final int totalAmount;
+  final int? deposit;
+  final int? balance;
+  final int? indebt;
+  final int? payAmount;
   final String tripDepartureId;
   const PaymentSheet({
     super.key,
-    required this.tripImage,
-    required this.tripTitle,
-    required this.tripDepartureDate,
+    this.tripImage,
+    this.tripTitle,
+    this.tripDepartureDate,
     required this.totalAmount,
-    required this.balance,
-    required this.deposit,
-    required this.indebt,
-    required this.payAmount,
+    this.balance,
+    this.deposit,
+    this.indebt,
+    this.payAmount,
     required this.tripDepartureId,
   });
 
   @override
   ConsumerState<PaymentSheet> createState() => _PaymentSheetState();
 }
-// Checkout helper methods moved inside state class so they can access `ref` and refresh providers.
+
 class _PaymentSheetState extends ConsumerState<PaymentSheet> {
   String _selectedMethod = "wallet";
 
@@ -79,15 +80,11 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                 final url = req.url;
                 debugPrint('WebView navigation: $url');
 
-                if (url.startsWith('myapp://payment-success')) {
+                if (url.startsWith('https://grouptrip.site/traveller/finances')) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Thanh toán thành công')),
-                  );
                   // Refresh wallet and trip data
                   try {
                     final _ = ref.refresh(walletModelProvider);
-                    // Fire-and-forget refresh of wallet provider
                     () async {
                       try {
                         await ref.read(walletModelProvider.future);
@@ -99,13 +96,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                   }
                   return NavigationDecision.prevent;
                 }
-                if (url.startsWith('myapp://payment-cancel')) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Giao dịch đã bị hủy')),
-                  );
-                  return NavigationDecision.prevent;
-                }
+               
                 return NavigationDecision.navigate;
               },
               onPageStarted: (s) => debugPrint('WebView page started: $s'),
@@ -121,13 +112,11 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
   Widget build(BuildContext context) {
     final ballance = ref.watch(walletModelProvider);
     final intBalance = ballance.asData?.value?.balance.toInt() ?? 0;
-    int _parseCurrency(String s) {
-      final digits = s.replaceAll(RegExp(r'[^0-9]'), '');
-      return int.tryParse(digits) ?? 0;
-    }
-    final intTotal = _parseCurrency(widget.totalAmount);
-    final intDeposit = _parseCurrency(widget.deposit);
+
+    // Sử dụng deposit nếu có, nếu không tính từ totalAmount
+    final intDeposit = widget.deposit ?? (widget.totalAmount ~/ 2);
     final intIndebt = (intDeposit - intBalance) > 0 ? (intDeposit - intBalance) : 0;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.8,
       maxChildSize: 1.0,
@@ -151,50 +140,63 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8F8F8),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                widget.tripImage,
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.tripTitle,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                      // Trip Info
+                      if (widget.tripImage != null && widget.tripTitle != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F8F8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  widget.tripImage!,
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 60,
+                                    height: 60,
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.image),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    widget.tripDepartureDate,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.tripTitle!,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    if (widget.tripDepartureDate != null)
+                                      Text(
+                                        widget.tripDepartureDate!,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
+                      if (widget.tripImage != null && widget.tripTitle != null)
+                        const SizedBox(height: 20),
+                      // Payment Details
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -206,26 +208,16 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Số tiền dựa trên số người tham gia và chi phí tour. Đây là số dư tối thiểu cần có để tham gia trip.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                                height: 1.3,
-                              ),
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const Text(
-                              "Chi tiết thanh toán",
+                              'Chi tiết thanh toán',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             _PaymentRow(
                               label: "Tổng chi phí tour",
-                              value: formatCurrency(intTotal.toDouble()),
+                              value: formatCurrency(widget.totalAmount.toDouble()),
                             ),
                             _PaymentRow(
                               label: "Tiền cọc (50%)",
@@ -237,19 +229,22 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                               value: formatCurrency(intBalance.toDouble()),
                             ),
                             _PaymentRow(
-                              label: "Còn lại",
+                              label: "Còn lại sau thanh toán",
                               value: formatCurrency((intBalance - intDeposit).toDouble()),
                             ),
-                            const SizedBox(height: 6),
-                            _PaymentRow(
-                              label: "Cần thanh toán thêm",
-                              value: formatCurrency(intIndebt.toDouble()),
-                              highlight: true,
-                            ),
+                            if (intIndebt > 0) ...[
+                              const SizedBox(height: 6),
+                              _PaymentRow(
+                                label: "Cần thanh toán thêm",
+                                value: formatCurrency(intIndebt.toDouble()),
+                                highlight: true,
+                              ),
+                            ],
                           ],
                         ),
                       ),
                       const SizedBox(height: 20),
+                      // Payment Method
                       const Text(
                         "Phương thức thanh toán",
                         style: TextStyle(
@@ -264,15 +259,13 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                         icon: Icons.account_balance_wallet_rounded,
                         title: "Ví điện tử",
                         subtitle: formatCurrency(intBalance.toDouble()),
-                        warning: intIndebt > 0 ? 'Số dư không đủ. Vui lòng nạp thêm ${formatCurrency(intIndebt.toDouble())}.' : null,
-                        actionText: 'Nạp tiền',
-                        onTapAction: () {
-                          if (intIndebt > 0) _checkout(intIndebt);
-                        },
+                        warning: intIndebt > 0
+                            ? 'Số dư không đủ. Vui lòng nạp thêm ${formatCurrency(intIndebt.toDouble())}.'
+                            : null,
+                        actionText: intIndebt > 0 ? 'Nạp tiền' : null,
+                        onTapAction: intIndebt > 0 ? () => _checkout(intIndebt) : null,
                       ),
-                   
                       const SizedBox(height: 12),
-                 
                       Center(
                         child: RichText(
                           textAlign: TextAlign.center,
@@ -282,9 +275,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                               color: Colors.grey[600],
                             ),
                             children: [
-                              const TextSpan(
-                                text: "Bằng việc thanh toán, bạn đồng ý với ",
-                              ),
+                              const TextSpan(text: "Bằng việc thanh toán, bạn đồng ý với "),
                               TextSpan(
                                 text: "Điều khoản dịch vụ",
                                 style: const TextStyle(
@@ -292,13 +283,10 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                                   fontWeight: FontWeight.w600,
                                   decoration: TextDecoration.underline,
                                 ),
-                                recognizer:
-                                    TapGestureRecognizer()
-                                      ..onTap = () {
-                                        debugPrint(
-                                          "Điều khoản dịch vụ clicked!",
-                                        );
-                                      },
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    debugPrint("Điều khoản dịch vụ clicked!");
+                                  },
                               ),
                               const TextSpan(text: " của chúng tôi"),
                             ],
@@ -310,6 +298,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                   ),
                 ),
               ),
+              // Header
               Container(
                 height: 64,
                 decoration: const BoxDecoration(
@@ -328,7 +317,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        "Thanh toán toàn bộ",
+                        "Thanh toán",
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -342,6 +331,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                   ),
                 ),
               ),
+              // Bottom Button
               Positioned(
                 bottom: 0,
                 left: 0,
@@ -349,65 +339,60 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                 child: SafeArea(
                   top: false,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       border: Border(
                         top: BorderSide(color: Color(0xFFE5E5E5), width: 1),
                       ),
                     ),
-                      child: SizedBox(
+                    child: SizedBox(
                       width: double.infinity,
                       child: intBalance >= intDeposit
                           ? ElevatedButton(
                               onPressed: () async {
                                 try {
-                                  final repo = ref.read(tripRepositoryProvider);
-                                  final success = await repo.joinTrip(widget.tripDepartureId);
-                                  if (success) {
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tham gia chuyến đi thành công')));
-                                      final _refWallet = ref.refresh(walletModelProvider);
-                                      _refWallet.whenOrNull(data: (_) {});
-                                      final _refTrip = ref.refresh(TripModelProvider);
-                                      _refTrip.whenOrNull(data: (_) {});
-                                    Navigator.of(context).pop();
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tham gia thất bại')));
+                                  await ref.read(mytripPayToTripProvider(widget.tripDepartureId).future);
+                                  // Refresh wallet and trip data after payment
+                                  await ref.refresh(walletModelProvider.future);
+                                  await ref.refresh(TripModelProvider.future);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Thanh toán thành công')),
+                                    );
+                                    Navigator.pop(context);
                                   }
                                 } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Lỗi: $e')),
+                                    );
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF007AFF),
                                 padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
-                              child: Text(
-                                'Tham gia chuyến đi',
-                                style: const TextStyle(
+                              child: const Text(
+                                'Thanh toán',
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),
                             )
-                                : ElevatedButton(
+                          : ElevatedButton(
                               onPressed: () => _checkout(intIndebt),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF007AFF),
                                 padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               child: Text(
-                                'Thanh toán ${formatCurrency(intIndebt.toDouble())}',
+                                'Nạp ${formatCurrency(intIndebt.toDouble())}',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,

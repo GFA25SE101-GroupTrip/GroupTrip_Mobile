@@ -262,6 +262,36 @@ class ApiClient {
 
     return dio.delete(path, data: data);
   }
+
+   Future<Response> postFormData(
+    String serviceKey,
+    String path, {
+    required FormData data,
+  }) {
+    final dio = _dioFor(serviceKey);
+
+    print('➡️ [ApiClient] POST (FormData) service=$serviceKey path=$path base=${dio.options.baseUrl}');
+
+    final base = dio.options.baseUrl;
+    if ((base.isEmpty) && path.startsWith('/')) {
+      throw ArgumentError(
+        'No API base URL configured for service "$serviceKey". '
+        'Set API_BASE_URL or API_BASE_${serviceKey.toUpperCase()} in .env. '
+        'Currently dio.options.baseUrl="$base"',
+      );
+    }
+
+    return dio.post(
+      path,
+      data: data,
+      options: Options(
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      ),
+    );
+  }
+
   /// Convenience helpers that use 'default' service.
   Future<Response> getDefault(String path, {Map<String, dynamic>? queryParameters}) => get('default', path, queryParameters: queryParameters);
   Future<Response> postDefault(String path, {dynamic data}) => post('default', path, data: data);

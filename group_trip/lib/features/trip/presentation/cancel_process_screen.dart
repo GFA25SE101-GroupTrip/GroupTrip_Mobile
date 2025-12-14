@@ -1,43 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:group_trip/features/mytrip/data/mytrip_model.dart';
 import 'package:group_trip/features/trip/presentation/widgets/process/cancel/cancel_body.dart';
 import 'package:group_trip/features/trip/presentation/widgets/process/cancel/cancel_header.dart';
 
 
 class CancelProcessScreen extends StatefulWidget {
-  static const routeName = '/cancel_process';
-  const CancelProcessScreen({super.key});
+  final String departureId;
+  final Map<String, dynamic> tripData;
+
+  static const routeName = '/canceled_process';
+  const CancelProcessScreen({super.key, required this.departureId, required this.tripData});
 
   @override
   State<CancelProcessScreen> createState() => _CancelProcessScreenState();
 }
 
 class _CancelProcessScreenState extends State<CancelProcessScreen> {
-  final String imageUrl = 'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg2/800/400';
+  late MyTripModel? _tripModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _parseAndUpdateTripData();
+  }
+
+  void _parseAndUpdateTripData() {
+    if (widget.tripData.isNotEmpty) {
+      try {
+        _tripModel = MyTripModel.fromJson(widget.tripData);
+      } catch (e) {
+        _tripModel = null;
+        print('Error parsing trip data: $e');
+      }
+    } else {
+      _tripModel = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final String displayImageUrl = _tripModel?.img?.isNotEmpty == true 
+        ? _tripModel!.img 
+        : 'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg2/800/400';
+    
+    final String displayTitle = _tripModel?.name ?? 'Trekking Tà Năng - Phan Dũng';
+    final String cancelReason = _tripModel?.cancelReason ?? 'Chưa có lý do hủy';
+
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          CancelHeader(
-            imageUrl: imageUrl,
-            title: 'Trekking Tà Năng - Phan Dũng',
-          ),
-          CancelBody(imageUrl: imageUrl),
-          Positioned(
-            top: 50,
-            left: 16,
-            right: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Expanded(
+            child: Stack(
               children: [
-                _buildCircleIcon(
-                  icon: Icons.arrow_back,
-                  onTap: () => Navigator.pop(context),
+                SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      CancelHeader(
+                        imageUrl: displayImageUrl,
+                        title: displayTitle,
+                        cancelReason: cancelReason,
+                      ),
+                      CancelBody(imageUrl: displayImageUrl),
+                    ],
+                  ),
                 ),
-                _buildCircleIcon(
-                  icon: Icons.share,
-                  onTap: () => {print('share')},
+                Positioned(
+                  top: 50,
+                  left: 16,
+                  right: 16,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildCircleIcon(
+                        icon: Icons.arrow_back,
+                        onTap: () => Navigator.pop(context),
+                      ),
+                      _buildCircleIcon(
+                        icon: Icons.share,
+                        onTap: () => {print('share')},
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

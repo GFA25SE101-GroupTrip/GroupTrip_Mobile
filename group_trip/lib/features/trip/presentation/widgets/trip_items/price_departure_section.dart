@@ -6,10 +6,6 @@ import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:group_trip/features/trip/data/trip_departure_model.dart';
 import 'package:group_trip/features/trip/data/trip_cost_range_model.dart';
-import 'package:group_trip/features/trip/presentation/widgets/process/deposit_paid/payment_sheet.dart'
-    as trip_sheet;
-import 'package:group_trip/features/wallet/presentation/widget/payment_sheet.dart'
-    as wallet_sheet;
 import 'package:group_trip/features/trip/providers/tripProvider.dart';
 
 class PriceDepartureSection extends ConsumerWidget {
@@ -48,37 +44,39 @@ class PriceDepartureSection extends ConsumerWidget {
     return "${formatter.format(price)}đ";
   }
 
-  void _onSelectDeparture(
+  Future<void> _onSelectDeparture(
     BuildContext context,
+    WidgetRef ref,
     TripDeparture departure,
     int intBalance,
-  ) {
+  ) async {
     if (departure.tripCostRanges.isEmpty) return;
 
     final minRange = departure.tripCostRanges.reduce(
       (a, b) => a.price < b.price ? a : b,
     );
 
-    showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder:
-            (_) => trip_sheet.PaymentSheet(
-              tripImage: tripImage,
-              tripTitle: tripTitle,
-              tripDepartureDate: _formatDateRange(
-                departure.startDate,
-                departure.endDate,
-              ),
-              totalAmount: formatIntCurrency(minRange.price),
-              balance: formatIntCurrency(intBalance),
-              deposit: formatIntCurrency(minRange.price ~/ 2),
-              indebt: formatIntCurrency(minRange.price ~/ 2 - intBalance),
-              tripDepartureId: departure.id,
-              payAmount: minRange.price ~/ 2 - intBalance,
-            ),
+    try {
+      final repo = ref.read(tripRepositoryProvider);
+      final success = await repo.joinTrip(departure.id);
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tham gia chuyến đi thành công')),
+        );
+        final _refWallet = ref.refresh(walletModelProvider);
+        _refWallet.whenOrNull(data: (_) {});
+        final _refTrip = ref.refresh(TripModelProvider);
+        _refTrip.whenOrNull(data: (_) {});
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tham gia thất bại')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e')),
       );
+    }
 
     print('minPrice: ${minRange.price} - User Balance: $intBalance');
   }
@@ -99,7 +97,9 @@ class PriceDepartureSection extends ConsumerWidget {
       key: const ValueKey('price_departure'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...tripDepartures.map((departure) {
+        ...tripDepartures
+            .where((departure) => departure.departureStatus?.toLowerCase() == 'ready')
+            .map((departure) {
           final dateText = _formatDateRange(
             departure.startDate,
             departure.endDate,
@@ -241,7 +241,7 @@ class PriceDepartureSection extends ConsumerWidget {
                             side: const BorderSide(color: Color(0xFF007AFF)),
                           ),
                           onPressed: () =>
-                              _onSelectDeparture(context, departure, intBalance),
+                              _onSelectDeparture(context, ref, departure, intBalance),
                           child: const Text(
                             "Chọn ngày này",
                             style: TextStyle(

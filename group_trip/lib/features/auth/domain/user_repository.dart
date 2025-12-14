@@ -21,3 +21,24 @@ class UserRepository {
     }
   }
 }
+
+class FcmTokenRepository {
+  final FcmTokenRemoteDataSource remoteDataSource;
+  FcmTokenRepository({required this.remoteDataSource});
+
+  Future<void> sendFcmToken(String fcmToken) async {
+    try {
+      await remoteDataSource.sendFcmToken(fcmToken);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteFcmToken(String fcmToken) async {
+    try {
+      await remoteDataSource.deleteFcmToken(fcmToken);
+    } catch (e) {
+      rethrow;
+    }
+  }
+}

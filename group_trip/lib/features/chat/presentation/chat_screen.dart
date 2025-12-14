@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:group_trip/features/chat/presentation/chat_detail_screen.dart';
 import 'package:group_trip/features/chat/providers/chat_provider.dart';
 import 'package:group_trip/features/chat/data/chat_model.dart';
+import 'package:group_trip/core/config/secure_storage_service.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({Key? key}) : super(key: key);
@@ -21,6 +22,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+  }
+
+  Future<bool> _shouldHideChat(ChatModel msg) async {
+    try {
+      final secureStorage = SecureStorageService();
+      final user = await secureStorage.getUserResponseFromJson();
+      final currentUserId = user?.userId;
+
+      if (currentUserId == null || msg.chatMembers == null) {
+        return false;
+      }
+
+      // Check if current user is in chatMembers
+      final userMember = msg.chatMembers!.firstWhere(
+        (member) => member.travellerId == currentUserId,
+        orElse: () => throw Exception('User not found'),
+      );
+
+      // Hide if memberStatus is 'Inactive'
+      print('Member status for user $currentUserId in chat ${msg.id}: ${userMember.memberStatus}');
+      return userMember.memberStatus?.toLowerCase() == 'inactive';
+      
+    } catch (_) {
+      // If error occurs, show the chat (default behavior)
+      return false;
+    }
   }
 
   void _openSearch() {
@@ -188,13 +215,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         if (displayItems.isEmpty)
           return const Center(child: Text('Không có tin nhắn'));
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: displayItems.length,
-          itemBuilder: (context, index) {
-            final msg = displayItems[index];
-            return _buildMessageCard(msg);
+        return RefreshIndicator(
+          onRefresh: () async {
+            await ref.refresh(chatListViewProvider.future);
           },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(12),
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: displayItems.length,
+            itemBuilder: (context, index) {
+              final msg = displayItems[index];
+              return FutureBuilder<bool>(
+                future: _shouldHideChat(msg),
+                builder: (context, snapshot) {
+                  // If still loading, show nothing (or a placeholder)
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  // If should hide this chat, don't render it
+                  if (snapshot.data ?? false) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  // Otherwise, show the message card
+                  return _buildMessageCard(msg);
+                },
+              );
+            },
+          ),
         );
       },
     );
@@ -204,14 +253,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     String _formatTime(String? timeStr) {
       if (timeStr == null || timeStr.isEmpty) return '';
       try {
+        // Parse UTC time từ server
         final dateTime = DateTime.parse(timeStr);
+        
+        // Convert to local time để so sánh và display đúng múi giờ
+        
+        // So sánh với local date/time
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         final yesterday = DateTime(now.year, now.month, now.day - 1);
         final msgDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
 
         if (msgDate == today) {
-          // Same day: show HH:mm
+          // Same day: show HH:mm (lúc này localDateTime đã là local time)
           return DateFormat('HH:mm').format(dateTime);
         } else if (msgDate == yesterday) {
           // Yesterday: show "Hôm qua"

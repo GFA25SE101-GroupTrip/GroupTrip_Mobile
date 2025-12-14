@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/core/config/secure_storage_service.dart';
 import 'package:group_trip/core/providers/api_client_provider.dart';
 import 'package:group_trip/core/signalr/signalr_provider.dart';
 import 'package:group_trip/features/chat/data/chat_api.dart';
@@ -60,6 +61,31 @@ final chatDetailViewProvider =
   }
 });
 
+// Provider to check if current user is inactive in a chat
+final checkUserInactivStatusProvider = FutureProvider.family<bool, ChatModel>((ref, chat) async {
+  try {
+    final secureStorage = SecureStorageService();
+    final user = await secureStorage.getUserResponseFromJson();
+    final currentUserId = user?.userId;
+
+    if (currentUserId == null || chat.chatMembers == null || chat.chatMembers!.isEmpty) {
+      return false;
+    }
+
+    // Check if current user is in chatMembers
+    final userMember = chat.chatMembers!.firstWhere(
+      (member) => member.travellerId == currentUserId,
+      orElse: () => throw Exception('User not found in chat members'),
+    );
+
+    print('Member status for user $currentUserId in chat ${chat.id}: ${userMember.memberStatus}');
+    return userMember.memberStatus?.toLowerCase() == 'inactive';
+  } catch (e) {
+    print('Error checking user inactive status: $e');
+    return false;
+  }
+});
+
 final chatDetailProvider = StateNotifierProvider.family<ChatDetailNotifier, AsyncValue<ChatModel>, String>(
   (ref, chatId) {
     return ChatDetailNotifier(ref, chatId);
@@ -79,7 +105,10 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
   int _compareByCreatedTime(ChatMessage a, ChatMessage b) {
     DateTime parseSafe(String iso) {
       try {
-        return DateTime.parse(iso).toUtc();
+        // DateTime.parse() tự động handle Z indicator (UTC)
+        final parsed = DateTime.parse(iso);
+        // Đảm bảo always return UTC để compare đúng
+        return parsed.isUtc ? parsed : parsed.toUtc();
       } catch (_) {
         return DateTime.fromMillisecondsSinceEpoch(0).toUtc();
       }
@@ -90,10 +119,18 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
     return da.compareTo(db);
   }
 
+  /// 🔄 Helper: Sort tin nhắn theo createdTime (cũ → mới)
+  ChatModel _sortChatMessages(ChatModel chat) {
+    final messages = chat.messages ?? [];
+    final sorted = [...messages]..sort((a, b) => _compareByCreatedTime(a, b));
+    return chat.copyWith(messages: sorted);
+  }
+
   Future<void> _loadInitialMessages() async {
     try {
       final chatDetail = await ref.read(chatRepositoryProvider).getChatDetail(chatId);
-      state = AsyncData(chatDetail);
+      // 🔄 Sort tin nhắn ngay khi load từ server
+      state = AsyncData(_sortChatMessages(chatDetail));
     } catch (e, st) {
       state = AsyncError(e, st);
     }
@@ -121,7 +158,9 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
         // treat it as the same message and replace it rather than append a duplicate.
         DateTime parseTime(String iso) {
           try {
-            return DateTime.parse(iso);
+            final parsed = DateTime.parse(iso);
+            // Đảm bảo always return UTC để compare đúng (same as parseSafe)
+            return parsed.isUtc ? parsed : parsed.toUtc();
           } catch (_) {
             return DateTime.now().toUtc();
           }
@@ -143,18 +182,10 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
           return (sameAttachment || sameContent) && timeDiff <= 5;
         });
 
-        if (duplicateIndex != -1) {
-          final updated = [...chatMessages];
-          // Replace the optimistic message with the server message (preserve ordering)
-          updated[duplicateIndex] = msg;
-          updated.sort((a, b) => _compareByCreatedTime(a, b));
-          return currentChat.copyWith(messages: updated);
-        }
+     
 
-        // Otherwise append normally
-        final updatedMessages = [...chatMessages, msg]
-          ..sort((a, b) => _compareByCreatedTime(a, b));
-
+        // Otherwise append normally and sort
+        final updatedMessages = [...chatMessages, msg];
         return currentChat.copyWith(messages: updatedMessages);
       });
     });
@@ -173,16 +204,6 @@ class ChatDetailNotifier extends StateNotifier<AsyncValue<ChatModel>> {
         return m.copyWith(userRead: [...m.userRead, UserReadInfo(userId: userId, userName: '', imgUrl: '')]);
       }).toList();
 
-      return currentChat.copyWith(messages: updatedMessages);
-    });
-  }
-
-  // Gọi khi gửi tin nhắn thành công (optimistic update)
-  void addMessageLocally(ChatMessage msg) {
-    state = state.whenData((currentChat) {
-      final chatMessages = currentChat.messages ?? [];
-      final updatedMessages = [...chatMessages, msg]
-        ..sort((a, b) => _compareByCreatedTime(a, b));
       return currentChat.copyWith(messages: updatedMessages);
     });
   }

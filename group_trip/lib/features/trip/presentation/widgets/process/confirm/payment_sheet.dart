@@ -3,7 +3,7 @@ import 'package:flutter/gestures.dart';
 
 class PaymentSheet extends StatefulWidget {
   const PaymentSheet({super.key});
-
+  
   @override
   State<PaymentSheet> createState() => _PaymentSheetState();
 }
@@ -46,12 +46,12 @@ class _PaymentSheetState extends State<PaymentSheet> {
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg2/800/400',
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                              ),
+                              // child: Image.network(
+                              //   'https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg2/800/400',
+                              //   width: 60,
+                              //   height: 60,
+                              //   fit: BoxFit.cover,
+                              // ),
                             ),
                             const SizedBox(width: 12),
                             const Expanded(

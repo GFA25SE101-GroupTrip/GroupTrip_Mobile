@@ -6,10 +6,14 @@ import 'package:signalr_netcore/signalr_client.dart';
 class SignalRService {
   HubConnection? connection;
 
-  String chatId = "";
+  List<String> chatIds = [];  // ← Thay đổi: dùng List thay vì String
   void setChatIds(chatIds) {
-    if (chatIds != null && chatIds is String) {
-      chatId = chatIds;
+    if (chatIds != null) {
+      if (chatIds is String) {
+        this.chatIds = [chatIds];
+      } else if (chatIds is List) {
+        this.chatIds = List<String>.from(chatIds);
+      }
     }
   }
  
@@ -69,10 +73,14 @@ class SignalRService {
 
     try {
       await connection!.start();
-      await joinChat(chatId);
+      // Join tất cả chatIds, không chỉ một cái
+      for (final id in chatIds) {
+        await joinChat(id);
+      }
       
       print("SIGNALR KẾT NỐI THÀNH CÔNG! State: ${connection!.state}");
       print("Connection ID: ${connection!.connectionId}");
+      print("Đã join ${chatIds.length} chats");
     } catch (e, st) {
       print("KHÔNG THỂ KẾT NỐI SIGNALR: $e");
       print(st);

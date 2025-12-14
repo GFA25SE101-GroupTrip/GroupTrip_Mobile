@@ -3,19 +3,19 @@ class WalletModel {
   final String id;
   final String userId;
   final double balance;
-  final String status;
+  final String? status;
   WalletModel({
     required this.id,
     required this.userId,
     required this.balance,
-    required this.status,
+    this.status,
   });
   factory WalletModel.fromJson(Map<String, dynamic> json) {
     return WalletModel(
       id: json['id'] as String,
       userId: json['userId'] as String,
       balance: (json['balance'] as num).toDouble(),
-      status: json['status'] as String,
+      status: json['status'] as String?,
     );
   }
 }

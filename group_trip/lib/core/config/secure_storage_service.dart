@@ -6,6 +6,7 @@ import 'package:group_trip/features/auth/data/user_model.dart';
 class SecureStorageService {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
+  static const _fcmTokenKey = 'fcm_token';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   // Lưu token
@@ -28,6 +29,16 @@ class SecureStorageService {
   Future<void> clearTokens() async {
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
+  }
+
+  // Lưu FCM token
+  Future<void> saveFcmToken(String fcmToken) async {
+    await _storage.write(key: _fcmTokenKey, value: fcmToken);
+  }
+
+  // Lấy FCM token
+  Future<String?> getFcmToken() async {
+    return await _storage.read(key: _fcmTokenKey);
   }
 
   Future<void> saveUserInfor(UserResponse user) async {
@@ -93,6 +104,7 @@ class SecureStorageService {
   Future<void> clearAll() async {
     await clearUserJson();
     await clearTokens();
+    await _storage.delete(key: _fcmTokenKey);
   }
 
 }

@@ -20,7 +20,7 @@ class BlogDetailScreen extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Xóa bài viết thành công')),
       );
-      ref.refresh(blogListProvider);
+      await ref.refresh(blogListProvider);
       Navigator.of(context).pop();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

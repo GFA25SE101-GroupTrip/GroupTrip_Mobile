@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/core/providers/api_client_provider.dart';
 import 'package:group_trip/features/mytrip/data/mytrip_api.dart';
 import 'package:group_trip/features/mytrip/data/mytrip_model.dart';
+import 'package:group_trip/features/mytrip/data/mytriptracking_model.dart';
 import 'package:group_trip/features/mytrip/domain/mytrip_respository.dart';
 
 final MytripRemoteDataSourceProvider = Provider((ref) {
@@ -36,3 +38,57 @@ class MyTripNotifier extends StateNotifier<AsyncValue<List<MyTripModel>>> {
   }
 }
 
+final mytripTrackingRouteProvider =
+    FutureProvider.family<TrackingRoute, String>((ref, departureId) async {
+  print('✅ mytripTrackingRouteProvider initialized for departureId: $departureId');
+  final repository = ref.watch(mytripRepositoryProvider);
+  return await repository.fetchTrackingRoute(departureId);
+});
+
+final mytripOutTripProvider =
+    FutureProvider.family<void, String>((ref, tripDepartureId) async {
+  print('✅ mytripOutTripProvider initialized for tripDepartureId: $tripDepartureId');
+  final repository = ref.watch(mytripRepositoryProvider);
+  return await repository.outTrip(tripDepartureId);
+});
+
+final mytripRejoinTripProvider =
+    FutureProvider.family<void, String>((ref, tripDepartureId) async {
+  print('✅ mytripRejoinTripProvider initialized for tripDepartureId: $tripDepartureId');
+  final repository = ref.watch(mytripRepositoryProvider);
+  return await repository.rejoinTrip(tripDepartureId);
+});
+
+final mytripPayToTripProvider =
+    FutureProvider.family<void, String>((ref, tripDepartureId) async {
+  print('✅ mytripPayToTripProvider initialized for tripDepartureId: $tripDepartureId');
+  final repository = ref.watch(mytripRepositoryProvider);
+  return await repository.payToTrip(tripDepartureId);
+});
+
+class EvaluateTripParams {
+  final String tripId;
+  final int rating;
+  final String comment;
+  final List<File> images;
+
+  EvaluateTripParams({
+    required this.tripId,
+    required this.rating,
+    required this.comment,
+    required this.images,
+  });
+}
+
+
+final mytripEvaluateTripProvider =
+    FutureProvider.family<void, EvaluateTripParams>((ref, params) async {
+  print('✅ mytripEvaluateTripProvider initialized for tripId: ${params.tripId}');
+  final repository = ref.watch(mytripRepositoryProvider);
+  return await repository.evaluateTrip(
+    params.tripId,
+    params.rating,
+    params.comment,
+    params.images,
+  );
+});

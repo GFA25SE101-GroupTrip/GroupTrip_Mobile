@@ -32,9 +32,12 @@ class ChatMessage {
   final String content;
   final String attachmentUrl;
   final String messageType;
-  final String createdTime;
+  final String createdTime; // ✅ ISO8601 string format
   final bool isMine;
   final List<UserReadInfo> userRead;
+  
+  // Getter: parse createdTime để sử dụng khi cần DateTime
+  DateTime get createdAt => DateTime.parse(createdTime).toUtc();
 
   // Thêm 2 field cho event "đã đọc"
   final bool isMarkAsReadEvent;
@@ -67,7 +70,7 @@ class ChatMessage {
       content: '',
       attachmentUrl: '',
       messageType: '',
-      createdTime: DateTime.now().toIso8601String(),
+      createdTime: DateTime.now().toUtc().toIso8601String(), // ✅ ISO8601 string
       isMine: false,
       userRead: const [],
       isMarkAsReadEvent: true,

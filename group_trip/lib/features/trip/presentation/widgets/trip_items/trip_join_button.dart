@@ -3,7 +3,14 @@ import 'package:group_trip/features/trip/presentation/pending_process_screen.dar
 
 
 class JoinTripButton extends StatelessWidget {
-  const JoinTripButton({super.key});
+  final String departureId;
+  final Map<String, dynamic> tripData;
+
+  const JoinTripButton({
+    super.key,
+    required this.departureId,
+    required this.tripData,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +28,12 @@ class JoinTripButton extends StatelessWidget {
           Navigator.of(
             context,
             rootNavigator: true,
-          ).push(MaterialPageRoute(builder: (_) => PendingProcessScreen()));
+          ).push(MaterialPageRoute(
+            builder: (_) => PendingProcessScreen(
+              departureId: departureId,
+              tripData: tripData,
+            ),
+          ));
         },
         child: const Text(
           'Tham gia chuyến đi',

@@ -52,6 +52,10 @@ dependencies:
   qr_flutter: ^4.1.0
   webview_flutter: ^4.2.2
   signalr_netcore: ^1.4.4
+  firebase_core: ^4.2.1
+  firebase_messaging: ^16.0.4
+
+
 
 dev_dependencies:
   flutter_test:

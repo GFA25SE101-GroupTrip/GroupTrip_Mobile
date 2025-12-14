@@ -18,7 +18,7 @@ class ProfileScreen extends ConsumerWidget {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text(
-          "My Profile",
+          "Tài khoản của tôi",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.grey.shade100,

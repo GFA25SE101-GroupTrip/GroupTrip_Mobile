@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:group_trip/core/api/api_client.dart';
 import 'package:group_trip/core/providers/api_client_provider.dart';
 import 'package:group_trip/features/auth/data/user_api.dart';
@@ -22,6 +23,26 @@ final userRemoteDataSourceProvider = Provider((ref) {
 final userRepositoryProvider = Provider((ref) {
   print('✅ userRepositoryProvider initialized');
   return UserRepository(remoteDataSource: ref.watch(userRemoteDataSourceProvider));
+});
+
+final fcmTokenRemoteDataSourceProvider = Provider(
+  (ref) {
+    print('✅ fcmTokenRemoteDataSourceProvider initialized');
+    return FcmTokenRemoteDataSource(api: ref.watch(apiClientProvider));
+  },
+);
+
+final fcmTokenRepositoryProvider = Provider(
+  (ref) {
+    print('✅ fcmTokenRepositoryProvider initialized');
+    return FcmTokenRepository(remoteDataSource: ref.watch(fcmTokenRemoteDataSourceProvider));
+  },
+);
+
+// 🔄 Setup FCM token refresh listener
+final setupFCMProvider = FutureProvider.family<void, FcmTokenRemoteDataSource>((ref, fcmDataSource) async {
+  print('✅ Setting up FCM token refresh listener');
+  setupFCM(fcmDataSource);
 });
 
 final roleRemoteDataSourceProvider = Provider(
@@ -57,7 +78,7 @@ class RoleNotifier extends StateNotifier<AsyncValue<List<RoleModel>>> {
 final authNotifierProvider =
   StateNotifierProvider<AuthNotifier, AsyncValue<UserResponse?>>((ref) {
   print('✅ authNotifierProvider initialized');
-  return AuthNotifier(ref.watch(userRepositoryProvider), ref.watch(secureStorageProvider));
+  return AuthNotifier(ref.watch(userRepositoryProvider), ref.watch(secureStorageProvider), ref);
 });
 
 final registerNotifierProvider =
@@ -91,9 +112,10 @@ class RegisterNotifier extends StateNotifier<AsyncValue<bool>> {
 class AuthNotifier extends StateNotifier<AsyncValue<UserResponse?>> {
   final UserRepository repository;
   final SecureStorageService storage;
+  final Ref ref;
   final ValueNotifier<int> listenable = ValueNotifier<int>(0);
 
-  AuthNotifier(this.repository, this.storage) : super(const AsyncData(null));
+  AuthNotifier(this.repository, this.storage, this.ref) : super(const AsyncData(null));
   
   void _emit() {
     listenable.value++;
@@ -131,11 +153,23 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserResponse?>> {
   }
 
   Future<void> logout() async {
-    // Clear stored tokens and user data locally
+    // Clear stored tokens and user data (but keep FCM token for next login)
     try {
       await storage.clearUserJson();
       await storage.clearTokens();
+      
+      // Get FCM token and delete from server
+      final fcmToken = await storage.getFcmToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        try {
+          await ref.read(fcmTokenRepositoryProvider).deleteFcmToken(fcmToken);
+          print('✅ FCM token deleted from server');
+        } catch (e) {
+          print('⚠️ Failed to delete FCM token from server: $e');
+        }
+      }
     } catch (_) {}
+    
     state = const AsyncData(null);
     _emit();
   }

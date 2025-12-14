@@ -30,16 +30,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _validatePassword(String? value) {
     final v = value ?? '';
     if (v.length < 6) {
-      return 'Passwords must be at least 6 characters.';
+      return 'Mật khẩu phải có ít nhất 6 ký tự.';
     }
     if (!_specialCharReg.hasMatch(v)) {
-      return 'Passwords must have at least one non alphanumeric character.';
+      return 'Mật khẩu phải có ít nhất một ký tự đặc biệt.';
     }
     if (!_digitReg.hasMatch(v)) {
-      return 'Passwords must have at least one digit (\'0\'-\'9\').';
+      return 'Mật khẩu phải có ít nhất một số (0-9).';
     }
     if (!_upperCaseReg.hasMatch(v)) {
-      return 'Passwords must have at least one uppercase (\'A\'-\'Z\').';
+      return 'Mật khẩu phải có ít nhất một chữ hoa (A-Z).';
     }
     return null;
   }
@@ -48,18 +48,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   List<String> _passwordValidationErrors(String pwd) {
     final errors = <String>[];
     if (pwd.length < 6) {
-      errors.add('Passwords must be at least 6 characters.');
+      errors.add('Mật khẩu phải có ít nhất 6 ký tự.');
     }
     if (!_specialCharReg.hasMatch(pwd)) {
       errors.add(
-        'Passwords must have at least one non alphanumeric character.',
+        'Mật khẩu phải có ít nhất một ký tự đặc biệt.',
       );
     }
     if (!_digitReg.hasMatch(pwd)) {
-      errors.add('Passwords must have at least one digit (\'0\'-\'9\').');
+      errors.add('Mật khẩu phải có ít nhất một số (0-9).');
     }
     if (!_upperCaseReg.hasMatch(pwd)) {
-      errors.add('Passwords must have at least one uppercase (\'A\'-\'Z\').');
+      errors.add('Mật khẩu phải có ít nhất một chữ hoa (A-Z).');
     }
     return errors;
   }
@@ -75,54 +75,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _register() async {
-    
-
     if (_formKey.currentState!.validate()) {
       final pwd = _passwordController.text;
 
-      // Double-check passwords match
-    
       // Validate password rules
       final pwdErrors = _passwordValidationErrors(pwd);
       if (pwdErrors.isNotEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(pwdErrors.join('\n'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(pwdErrors.join('\n'))),
+        );
         return;
       }
-      print('✅ ref is ${ref.hashCode}');
-      print('✅ notifier is ${ref.read(authNotifierProvider.notifier)}');
+
+      // Call login
       final notifier = ref.read(authNotifierProvider.notifier);
       await notifier.login(_nameController.text, _passwordController.text);
-     
+
       if (!mounted) return;
 
-      // TODO: Gọi API register ở đây (ví dụ dùng Dio)
+      // Get the updated state after login
       final state = ref.read(authNotifierProvider);
-      state.when(
-        data: (user) {
-          if (user != null) {
-           ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Login Success!'),
-                duration: Duration(seconds: 2),
-                backgroundColor: Colors.green,
-              ),
-            );
-            // Ensure profile provider refreshes and navigate to home immediately
-            ref.invalidate(userFromStorageProvider);
-            if (mounted) {
-              context.go('/blog');
-            }
+      
+      // Check if login was successful
+      final user = state.whenData((data) => data).value;
+      
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đăng nhập thành công!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Invalidate storage provider to refresh
+        ref.invalidate(userFromStorageProvider);
+        
+        if (mounted) {
+          // Check user role and navigate accordingly
+          final userRole = user.role?.toLowerCase() ?? 'traveller';
+          if (userRole == 'staff') {
+            context.go('/staff');
+          } else {
+            context.go('/blog');
           }
-        },
-        error: (e, _) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error: $e')));
-        },
-        loading: () {},
-      );
+        }
+      }
     }
   }
 
@@ -152,14 +150,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Title
                 Text(
-                  "Let’s Get Started",
+                  "Bắt đầu ngay",
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Create your new account and find more\nbeautiful destinations",
+                  "Tạo tài khoản mới của bạn và khám phá\nthêm nhiều điểm đến tuyệt đẹp",
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[600],
@@ -170,11 +168,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Name
                 AppTextField(
                   controller: _nameController,
-                  label: "Name",
-                  hint: "Enter your full name",
+                  label: "Tên",
+                  hint: "Nhập tên đầy đủ của bạn",
                   validator:
                       (value) =>
-                          value!.isEmpty ? "Please enter your name" : null,
+                          value!.isEmpty ? "Vui lòng nhập tên của bạn" : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -184,8 +182,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Password
                 AppTextField(
                   controller: _passwordController,
-                  label: "Password",
-                  hint: "Enter your password",
+                  label: "Mật khẩu",
+                  hint: "Nhập mật khẩu của bạn",
                   isPassword: true,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   validator: (value) {
@@ -252,7 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     label: const Text(
-                      'Continue with Google',
+                      'Tiếp tục với Google',
                       style: TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
@@ -279,7 +277,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               color: Colors.white,
                             )
                             : const Text(
-                              "Sign In",
+                              "Đăng nhập",
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.white,
@@ -295,13 +293,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Already have an account? "),
+                    const Text("Chưa có tài khoản? "),
                     GestureDetector(
                       onTap: () {
                         context.push('/signup');
                       },
                       child: const Text(
-                        "Sign Up",
+                        "Đăng ký",
                         style: TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.bold,
@@ -315,7 +313,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 16),
                   Text(
                     textAlign: TextAlign.center,
-                    'Login failed. Confirm your email, username and password are incorrect.',
+                    'Đăng nhập thất bại. Kiểm tra lại email, tên đăng nhập và mật khẩu.',
                     style: TextStyle(
                       color: Colors.red[700],
                       fontWeight: FontWeight.bold,

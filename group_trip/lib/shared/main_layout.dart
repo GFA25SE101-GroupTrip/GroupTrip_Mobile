@@ -76,7 +76,6 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     final totalUnread = _totalUnreadFrom(chatList);
 
     return Scaffold(
-      // appBar: const AppNavbar(),
       body: _pages[_selectedIndex],
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
