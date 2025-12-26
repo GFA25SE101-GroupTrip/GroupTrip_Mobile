@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/auth/presentation/widgets/input_widget.dart';
 import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
+import 'package:group_trip/features/staff/presentation/providers/staff_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -110,6 +111,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         
         // Invalidate storage provider to refresh
         ref.invalidate(userFromStorageProvider);
+        
+        // Refresh staff data for staff users
+        if (user.role?.toLowerCase() == 'staff') {
+          ref.refresh(staffDeparturesProvider);
+        }
         
         if (mounted) {
           // Check user role and navigate accordingly

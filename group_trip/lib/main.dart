@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:group_trip/core/api/api_client.dart';
 import 'package:group_trip/core/providers/api_client_provider.dart';
 import 'package:group_trip/core/providers/app_init_provider.dart';
 import 'package:group_trip/core/config/secure_storage_service.dart';
@@ -10,66 +9,83 @@ import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:group_trip/router/app_router.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
-// Hàm xử lý notification khi app đang background
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+/// =====================
+/// FCM Background Handler
+/// =====================
+/// ⚠️ CHỈ xử lý data, KHÔNG show notification
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("📩 Background message: ${message.messageId}");
+  debugPrint('📩 Background message data: ${message.data}');
 }
 
-void main() async {
+/// =====================
+/// Main
+/// =====================
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: '.env');
 
-  // 🟦 Firebase init (KHÔNG có firebase_options.dart)
+  /// Firebase init
   await Firebase.initializeApp();
 
-  // 🟥 Background message handler
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  /// Register background handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // 🟩 Request notification permission (Android 13+ + iOS)
-  NotificationSettings settings =
-      await FirebaseMessaging.instance.requestPermission();
-  print("🔔 Permission: ${settings.authorizationStatus}");
+  /// Request notification permission
+  final settings = await FirebaseMessaging.instance.requestPermission();
+  debugPrint('🔔 Permission: ${settings.authorizationStatus}');
 
-  // 🟨 Get FCM token
+  /// Get FCM token
   final token = await FirebaseMessaging.instance.getToken();
-  print("🔥 FCM Token: $token");
-  
-  // 💾 Save FCM token to secure storage
+  debugPrint('🔥 FCM Token: $token');
+
   if (token != null) {
     await SecureStorageService().saveFcmToken(token);
-    print("✅ FCM Token saved to storage");
+    debugPrint('✅ FCM Token saved');
   }
 
-  // 🟦 Foreground notifications
+  /// Foreground messages
+  /// ❌ Android không auto show notification khi foreground
   FirebaseMessaging.onMessage.listen((message) {
-    print("📨 Foreground: ${message.notification?.title}");
+    debugPrint('📨 Foreground message');
+    debugPrint('📦 Notification: ${message.notification}');
+    debugPrint('📦 Data: ${message.data}');
+    // 👉 nếu muốn: show in-app banner / badge
   });
 
-  // date formatting
+  /// Click notification (background / kill)
+  FirebaseMessaging.onMessageOpenedApp.listen((message) {
+    debugPrint('👉 Notification clicked');
+    debugPrint('📦 Data: ${message.data}');
+    // TODO: navigate bằng go_router dựa vào message.data
+  });
+
+  /// Date formatting
   try {
     await initializeDateFormatting('vi');
     Intl.defaultLocale = 'vi';
   } catch (e) {
-    print('⚠️ initializeDateFormatting failed: $e');
+    debugPrint('⚠️ Date formatting failed: $e');
   }
 
-  // provider init
+  /// Provider init
   final container = ProviderContainer();
   try {
     await container.read(appInitProvider.future);
   } catch (e) {
-    print('⚠️ App init failed: $e');
+    debugPrint('⚠️ App init failed: $e');
   }
 
-  // 🔄 Setup FCM token refresh listener from UserProvider
-  final fcmDataSource = FcmTokenRemoteDataSource(api: container.read(apiClientProvider));
+  /// FCM token refresh listener
+  final fcmDataSource =
+      FcmTokenRemoteDataSource(api: container.read(apiClientProvider));
   container.read(setupFCMProvider(fcmDataSource));
-  print("✅ FCM token refresh listener setup from UserProvider");
+  debugPrint('✅ FCM token refresh listener setup');
 
   runApp(
     UncontrolledProviderScope(
@@ -79,7 +95,9 @@ void main() async {
   );
 }
 
-
+/// =====================
+/// App
+/// =====================
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 

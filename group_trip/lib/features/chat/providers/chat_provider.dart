@@ -34,17 +34,55 @@ final checkContactExistsProvider =
 });
 
 
-final chatListViewProvider =
-    FutureProvider.autoDispose<dynamic>((ref) async {
-  final repo = ref.read(chatRepositoryProvider);
-  try {
-    final model = await repo.getChatList();
-    return model;
-  } catch (e) {
-    // Return null on error so UI can show a sensible fallback.
-    return null;
-  }
+final chatListViewProvider = StateNotifierProvider.autoDispose<ChatListNotifier, AsyncValue<List<ChatModel>>>((ref) {
+  return ChatListNotifier(ref);
 });
+
+class ChatListNotifier extends StateNotifier<AsyncValue<List<ChatModel>>> {
+  final Ref ref;
+
+  ChatListNotifier(this.ref) : super(const AsyncLoading()) {
+    loadInitialChatList();
+  }
+
+  Future<void> loadInitialChatList() async {
+    try {
+      final repo = ref.read(chatRepositoryProvider);
+      final rawData = await repo.getChatList();
+      
+      // getChatList() đã return List<ChatModel> rồi, không cần normalize thêm
+      state = AsyncData(rawData ?? []);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
+  /// ✅ Cập nhật preview tin nhắn cuối từ realtime
+  void updateConversationPreview(String chatId, String lastMessage, int unreadCount) {
+    final currentState = state;
+    if (currentState is! AsyncData<List<ChatModel>>) return;
+    
+    final chatList = currentState.value;
+    final chatIndex = chatList.indexWhere((chat) => chat.id == chatId);
+    
+    if (chatIndex != -1) {
+      final updatedChat = chatList[chatIndex].copyWith(
+        lastMessage: lastMessage,
+        unreadCount: unreadCount,
+        lastMessageTime: DateTime.now().toIso8601String(),
+      );
+      
+      final updatedList = [...chatList];
+      updatedList[chatIndex] = updatedChat;
+      
+      // Di chuyển chat này lên đầu danh sách
+      updatedList.removeAt(chatIndex);
+      updatedList.insert(0, updatedChat);
+      
+      state = AsyncData(updatedList);
+    }
+  }
+}
 
 final chatDetailViewProvider =
     FutureProvider.family.autoDispose<dynamic, String>((ref, chatId) async {

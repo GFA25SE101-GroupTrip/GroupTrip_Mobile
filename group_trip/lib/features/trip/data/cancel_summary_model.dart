@@ -9,14 +9,12 @@ class CancelSummaryRow {
 }
 
 class CancelSummaryModel {
-  final String cancelDate;
   final String reason;
   final String refundAmount;
   final String paymentMethod;
   final String estimatedTime;
 
   CancelSummaryModel({
-    required this.cancelDate,
     required this.reason,
     required this.refundAmount,
     required this.paymentMethod,
@@ -24,7 +22,6 @@ class CancelSummaryModel {
   });
 
   static CancelSummaryModel mock() => CancelSummaryModel(
-    cancelDate: '22/12/2025',
     reason: 'Không đủ thành viên',
     refundAmount: '5.500.000 VND',
     paymentMethod: 'Chuyển khoản ngân hàng',
@@ -32,7 +29,6 @@ class CancelSummaryModel {
   );
 
   List<CancelSummaryRow> toRows() => [
-    CancelSummaryRow("Ngày hủy", cancelDate),
     CancelSummaryRow("Lý do hủy", reason, color: const Color(0xFFDC2626)),
     CancelSummaryRow(
       "Số tiền hoàn lại",

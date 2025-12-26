@@ -22,10 +22,9 @@ class SignalRController {
 
   // Public: lấy stream cho từng chat riêng biệt
   Stream<ChatMessage> messagesStream(String chatId) {
-    return _chatMessageControllers.putIfAbsent(
-      chatId,
-      () => StreamController<ChatMessage>.broadcast(),
-    ).stream;
+    return _chatMessageControllers
+        .putIfAbsent(chatId, () => StreamController<ChatMessage>.broadcast())
+        .stream;
   }
 
   Future<void> connect(String token, chatIds) async {
@@ -69,12 +68,14 @@ class SignalRController {
         final chatId = args[2].toString();
 
         // Lấy user hiện tại để biết tin của mình hay người khác
-        final currentUserId = ref.read(userFromStorageProvider).asData?.value?.userId;
+        final currentUserId =
+            ref.read(userFromStorageProvider).asData?.value?.userId;
 
         String content = '';
         String attachmentUrl = '';
         String messageType = 'Normal';
-        String createdTime = DateTime.now().toIso8601String(); // Default: thời gian hiện tại
+        String createdTime =
+            DateTime.now().toIso8601String(); // Default: thời gian hiện tại
 
         if (rawContent is Map<String, dynamic>) {
           content = rawContent['content']?.toString() ?? '';
@@ -91,11 +92,12 @@ class SignalRController {
         // 🔍 Lấy senderName từ chatMembers đã load trong chatDetailProvider
         // Dùng ref.read để lấy state của chat này
         String senderName = 'Người dùng';
-       
 
         // Tạo ID tạm (rất quan trọng để Riverpod rebuild)
         final tempId = DateTime.now().millisecondsSinceEpoch.toString();
-        print("ReceiveMessage: chatId=$chatId, senderId=$senderId, senderName=$senderName, content=$content, createdTime=$createdTime, tempID=$tempId");
+        print(
+          "ReceiveMessage: chatId=$chatId, senderId=$senderId, senderName=$senderName, content=$content, createdTime=$createdTime, tempID=$tempId",
+        );
 
         final message = ChatMessage(
           id: tempId, // bắt buộc có id
@@ -111,12 +113,16 @@ class SignalRController {
         );
 
         // Phát vào đúng stream của chat đó → UI rebuild ngay lập tức
-        _chatMessageControllers.putIfAbsent(
-          chatId,
-          () => StreamController<ChatMessage>.broadcast(),
-        ).add(message);
+        _chatMessageControllers
+            .putIfAbsent(
+              chatId,
+              () => StreamController<ChatMessage>.broadcast(),
+            )
+            .add(message);
 
-        print("✅ Tin nhắn mới → Chat: $chatId | Từ: $senderName ($senderId) | Mình: ${message.isMine}");
+        print(
+          "✅ Tin nhắn mới → Chat: $chatId | Từ: $senderName ($senderId) | Mình: ${message.isMine}",
+        );
       } catch (e, s) {
         print("❌ Lỗi parse ReceiveMessage: $e\n$s");
       }
@@ -129,37 +135,53 @@ class SignalRController {
       final userId = args[1].toString();
 
       // Gửi event đặc biệt để ChatScreen xử lý "seen"
-      final event = ChatMessage.markAsRead(
-        chatId: chatId,
-        userId: userId,
-      );
+      final event = ChatMessage.markAsRead(chatId: chatId, userId: userId);
 
-      _chatMessageControllers.putIfAbsent(
-        chatId,
-        () => StreamController<ChatMessage>.broadcast(),
-      ).add(event);
+      _chatMessageControllers
+          .putIfAbsent(chatId, () => StreamController<ChatMessage>.broadcast())
+          .add(event);
 
       print("Đã xem → Chat: $chatId | User: $userId");
+      
+      // ✅ Cập nhật chatListViewProvider: reset unreadCount về 0
+      final notifier = ref.read(chatListViewProvider.notifier);
+      notifier.updateConversationPreview(chatId, '', 0);
     });
 
     // 📱 UpdateConversationPreview: cập nhật preview tin nhắn cuối
     _svc.connection!.on("UpdateConversationPreview", (args) {
       if (args == null || args.isEmpty) return;
-      
+
       try {
         final preview = args[0];
         if (preview == null) return;
-        
+
         if (preview is! Map) return;
-        
+
         final previewMap = preview as Map<dynamic, dynamic>;
+        print("📬 Full previewMap: $previewMap");
+
         final chatId = previewMap['chatId']?.toString() ?? '';
         final lastMessage = previewMap['lastMessage']?.toString() ?? '';
         final senderName = previewMap['senderName']?.toString() ?? '';
-        final unreadCount = previewMap['UserunreadCount'] ?? 0;
-        
-        print("📬 UpdateConversationPreview → ChatId: $chatId | LastMsg: $lastMessage | Unread: $unreadCount");
-        // TODO: Cập nhật UI danh sách chat (chatListViewProvider)
+
+        // Try different key names for unreadCount
+        final unreadCount =
+            (previewMap['userUnreadCount'] ??
+                    previewMap['userunreadCount'] ??
+                    previewMap['UserunreadCount'] as num?)
+                ?.toInt() ??
+            0;
+
+        print(
+          "📬 UpdateConversationPreview → ChatId: $chatId | LastMsg: $lastMessage | Unread: $unreadCount",
+        );
+
+        // ✅ Cập nhật trực tiếp state của chatListViewProvider
+        if (chatId.isNotEmpty) {
+          final notifier = ref.read(chatListViewProvider.notifier);
+          notifier.updateConversationPreview(chatId, lastMessage, unreadCount);
+        }
       } catch (e) {
         print("Lỗi parse UpdateConversationPreview: $e");
       }
@@ -168,10 +190,10 @@ class SignalRController {
     // 📍 ReceiveReadNotification: khi người khác đã đọc tin
     _svc.connection!.on("ReceiveReadNotification", (args) {
       if (args == null || args.length < 2) return;
-      
+
       final chatId = args[0].toString();
       final userId = args[1].toString();
-      
+
       print("👁️ ReceiveReadNotification → Chat: $chatId | User: $userId");
       // TODO: Cập nhật UI "đã xem" cho tin nhắn
     });

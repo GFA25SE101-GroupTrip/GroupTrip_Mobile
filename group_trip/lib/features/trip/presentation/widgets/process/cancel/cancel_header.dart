@@ -10,7 +10,7 @@ class CancelHeader extends StatelessWidget {
     super.key,
     required this.imageUrl,
     required this.title,
-    this.statusLabel = 'Canceled',
+    this.statusLabel = 'Đã hủy',
     this.cancelReason = 'Chưa có lý do hủy',
   });
 
@@ -61,7 +61,7 @@ class CancelHeader extends StatelessWidget {
                   _buildBadge(
                     label: statusLabel,
                     bgColor: const Color(0xFFFEE2E2),
-                    textColor: Color(0xFFB91C1C),
+                    textColor: Color.fromARGB(255, 26, 15, 15),
                     icon: Icons.close,
                     iconColor: Color(0xFFB91C1C),
                   ),

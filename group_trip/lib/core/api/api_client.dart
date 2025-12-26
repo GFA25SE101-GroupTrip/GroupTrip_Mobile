@@ -247,7 +247,20 @@ class ApiClient {
 
     return dio.put(path, data: data);
   }
+  Future<Response> putWithParams(String serviceKey, String path, {Map<String, dynamic>? queryParameters, dynamic data}) {
+    final dio = _dioFor(serviceKey);
+    // ignore: avoid_print
+    print('➡️ [ApiClient] PUT service=$serviceKey path=$path query=$queryParameters data=$data base=${dio.options.baseUrl}');
 
+    final base = dio.options.baseUrl;
+    if ((base.isEmpty) && path.startsWith('/')) {
+      throw ArgumentError('No API base URL configured for service "$serviceKey". '
+          'Set API_BASE_URL or API_BASE_${serviceKey.toUpperCase()} in your environment, or pass an absolute URL to the request. '
+          'Currently dio.options.baseUrl="${base}"');
+    }
+
+    return dio.put(path, queryParameters: queryParameters, data: data);
+  }
   Future<Response> delete(String serviceKey, String path, {dynamic data}) {
     final dio = _dioFor(serviceKey);
     // ignore: avoid_print

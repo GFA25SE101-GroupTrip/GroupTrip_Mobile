@@ -149,20 +149,7 @@ class BlogDetailScreen extends ConsumerWidget {
             const Divider(height: 32),
 
             // Bài viết liên quan
-            const Text(
-              "Bài viết liên quan",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 14),
-            _relatedPost(
-              "Hội An – Thành phố cổ kính trong ánh hoàng hôn",
-              "https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg",
-            ),
-            const SizedBox(height: 14),
-            _relatedPost(
-              "Khám phá ẩm thực Phú Yên, vùng đất đầy hương vị biển cả",
-              "https://res.cloudinary.com/db18zz55c/image/upload/v1762439871/uploads/scaled_38.jpg",
-            ),
+           
              const SizedBox(height: 14),
 
           ],

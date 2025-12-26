@@ -12,12 +12,14 @@ class PriceDepartureSection extends ConsumerWidget {
   final List<TripDeparture> tripDepartures;
   final String tripImage;
   final String tripTitle;
+  final String? selectedInsuranceId;
 
   const PriceDepartureSection({
     super.key,
     required this.tripDepartures,
     required this.tripImage,
     required this.tripTitle,
+    this.selectedInsuranceId,
   });
 
   String _formatDateRange(DateTime start, DateTime end) {
@@ -49,6 +51,7 @@ class PriceDepartureSection extends ConsumerWidget {
     WidgetRef ref,
     TripDeparture departure,
     int intBalance,
+    String? selectedInsuranceId,
   ) async {
     if (departure.tripCostRanges.isEmpty) return;
 
@@ -58,8 +61,16 @@ class PriceDepartureSection extends ConsumerWidget {
 
     try {
       final repo = ref.read(tripRepositoryProvider);
-      final success = await repo.joinTrip(departure.id);
-      if (success) {
+      print('Attempting to join trip departure: ${departure.id}');
+      print('Selected Insurance ID: $selectedInsuranceId');
+      // Gọi joinTrip trước
+      final result = await repo.joinTrip(departure.id);
+      if (result['success'] == true) {
+        // Nếu join thành công và có bảo hiểm được chọn, thêm bảo hiểm
+        if (selectedInsuranceId != null && selectedInsuranceId.isNotEmpty) {
+          await repo.addInsuranceToTripDeparture(departure.id, selectedInsuranceId);
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Tham gia chuyến đi thành công')),
         );
@@ -68,8 +79,9 @@ class PriceDepartureSection extends ConsumerWidget {
         final _refTrip = ref.refresh(TripModelProvider);
         _refTrip.whenOrNull(data: (_) {});
       } else {
+        final errorMessage = result['errorMessage'] ?? 'Tham gia thất bại';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tham gia thất bại')),
+          SnackBar(content: Text(errorMessage)),
         );
       }
     } catch (e) {
@@ -241,7 +253,7 @@ class PriceDepartureSection extends ConsumerWidget {
                             side: const BorderSide(color: Color(0xFF007AFF)),
                           ),
                           onPressed: () =>
-                              _onSelectDeparture(context, ref, departure, intBalance),
+                              _onSelectDeparture(context, ref, departure, intBalance, selectedInsuranceId),
                           child: const Text(
                             "Chọn ngày này",
                             style: TextStyle(

@@ -160,10 +160,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           (err, st) =>
               const Center(child: Text('Không thể tải danh sách tin nhắn')),
       data: (data) {
-        // Normalize different payload shapes into a List<ChatModel>
+        // Handle List<ChatModel> directly
         final List<ChatModel> items = [];
-
-        if (data == null) {
+        
+        if (data is List<ChatModel>) {
+          items.addAll(data);
+        } else if (data == null) {
           // leave empty
         } else if (data is ChatModel) {
           items.add(data);
@@ -217,7 +219,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
         return RefreshIndicator(
           onRefresh: () async {
-            await ref.refresh(chatListViewProvider.future);
+            final notifier = ref.read(chatListViewProvider.notifier);
+            await notifier.loadInitialChatList();
           },
           child: ListView.builder(
             padding: const EdgeInsets.all(12),

@@ -31,11 +31,13 @@ class TripDetailBody extends ConsumerStatefulWidget {
 
 class _TripDetailBodyState extends ConsumerState<TripDetailBody> {
   int _selectedTabIndex = 0;
+  String? _selectedInsuranceId;
 
   final List<String> _tabs = [
     'Lịch trình',
     'Giá & Khởi hành',
     'Quy định',
+    'Bảo hiểm',
     'Thư viện ảnh',
     'Review',
   ];
@@ -139,6 +141,12 @@ class _TripDetailBodyState extends ConsumerState<TripDetailBody> {
                 TripTabContent(
                   selectedIndex: _selectedTabIndex,
                   trip: TripdetailContentData,
+                  selectedInsuranceId: _selectedInsuranceId,
+                  onInsuranceSelected: (insuranceId) {
+                    setState(() {
+                      _selectedInsuranceId = insuranceId;
+                    });
+                  },
                 ),
               ],
             ),

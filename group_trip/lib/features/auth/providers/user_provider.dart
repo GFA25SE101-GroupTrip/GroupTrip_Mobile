@@ -9,6 +9,7 @@ import 'package:group_trip/features/auth/domain/role_repository.dart';
 import 'package:group_trip/features/auth/domain/user_repository.dart';
 import 'package:group_trip/core/config/secure_storage_service.dart';
 import 'package:group_trip/core/providers/secure_storage_provider.dart';
+import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
 
 // ...existing code...
 // Khai báo provider cho ApiClient. Riverpod sẽ tạo/khóa một instance ApiClient
@@ -157,6 +158,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserResponse?>> {
     try {
       await storage.clearUserJson();
       await storage.clearTokens();
+      
+      // Clear wallet repository cache
+      try {
+        ref.read(WalletRepositoryProvider).clearCache();
+        print('✅ Wallet cache cleared');
+      } catch (e) {
+        print('⚠️ Failed to clear wallet cache: $e');
+      }
       
       // Get FCM token and delete from server
       final fcmToken = await storage.getFcmToken();

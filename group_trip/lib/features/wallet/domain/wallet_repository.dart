@@ -70,4 +70,11 @@ class WalletRepository {
     }
   }
 
+  /// Clear the cached wallet data (called when user logs out)
+  void clearCache() {
+    _cache = null;
+    // ignore: avoid_print
+    print('✅ [WalletRepository] Cache cleared');
+  }
+
 }

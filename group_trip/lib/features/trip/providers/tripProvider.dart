@@ -26,13 +26,43 @@ final TripDetailModelProvider =
 });
 
 final JoinTripProvider =
-    FutureProvider.autoDispose.family<bool, String>((ref, tripDepartureId) async {
+    FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, tripDepartureId) async {
   final tripRepository = ref.watch(tripRepositoryProvider);
   return tripRepository.joinTrip(tripDepartureId);
 });
+
+// final JoinTripWithInsuranceProvider =
+//     FutureProvider.autoDispose.family<bool, Map<String, dynamic>>((ref, params) async {
+//   final tripRepository = ref.watch(tripRepositoryProvider);
+//   final tripDepartureId = params['tripDepartureId'] as String;
+//   final insuranceId = params['insuranceId'] as String?;
+  
+//   // Gọi joinTrip
+//   final joined = await tripRepository.joinTrip(tripDepartureId);
+  
+//   // Nếu join thành công và có insuranceId, thêm bảo hiểm
+//   if (joined && insuranceId != null && insuranceId.isNotEmpty) {
+//     await tripRepository.addInsuranceToTripDeparture(tripDepartureId, insuranceId);
+//   }
+  
+//   return joined;
+// });
 
 final CheckJoinTripProvider =
     FutureProvider.autoDispose.family<bool, String>((ref, tripDepartureId) async {
   final tripRepository = ref.watch(tripRepositoryProvider);
   return tripRepository.checkJoin(tripDepartureId);
+});
+
+
+final SearchTripByNameProvider =
+    FutureProvider.autoDispose.family<List<TripModel>, String>((ref, tripName) async {
+  final tripRepository = ref.watch(tripRepositoryProvider);
+  return tripRepository.searchTripsByName(tripName);
+});
+
+final SearchTripByDateProvider =
+    FutureProvider.autoDispose.family<List<TripModel>, String>((ref, fromDate) async {
+  final tripRepository = ref.watch(tripRepositoryProvider);
+  return tripRepository.searchTripsByDate(fromDate);
 });

@@ -15,10 +15,12 @@ class NotificationScreen extends ConsumerWidget {
         return Colors.blue;
       case 'payment':
         return Colors.green;
-      case 'member':
+      case 'message':
         return Colors.purple;
-      case 'system':
+      case 'member':
         return Colors.orange;
+      case 'system':
+        return Colors.amber;
       default:
         return Colors.grey;
     }
@@ -63,8 +65,9 @@ class NotificationScreen extends ConsumerWidget {
     return notificationsAsync.when(
       data: (notifications) {
         // Sort notifications by latest time first
-        final sortedNotifications = List<NotificationModel>.from(notifications)
-          ..sort((a, b) => b.createAt.compareTo(a.createAt));
+        final sortedNotifications = List<NotificationModel>.from(
+          notifications.where((n) => n.notificationType != 'MessageReceive'),
+        )..sort((a, b) => b.createAt.compareTo(a.createAt));
         
         final unreadCount = sortedNotifications.where((n) => !n.isRead).length;
 
@@ -165,7 +168,6 @@ class NotificationScreen extends ConsumerWidget {
                       return NotificationItemWidget(
                         notification: sortedNotifications[index],
                         typeColor: _getTypeColor(sortedNotifications[index].objectType),
-                        typeIcon: _getTypeIcon(sortedNotifications[index].objectType),
                         formattedTime: _formatTime(sortedNotifications[index].createAt),
                       );
                     },
@@ -259,14 +261,12 @@ class NotificationScreen extends ConsumerWidget {
 class NotificationItemWidget extends ConsumerWidget {
   final NotificationModel notification;
   final Color typeColor;
-  final IconData typeIcon;
   final String formattedTime;
 
   const NotificationItemWidget({
     super.key,
     required this.notification,
     required this.typeColor,
-    required this.typeIcon,
     required this.formattedTime,
   });
 
@@ -283,19 +283,20 @@ class NotificationItemWidget extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon with type color
+              // Type badge
               Container(
-                width: 52,
-                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: typeColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+                  color: typeColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                child: Center(
-                  child: Icon(
-                    typeIcon,
+                child: Text(
+                  notification.objectType,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                     color: typeColor,
-                    size: 28,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ),

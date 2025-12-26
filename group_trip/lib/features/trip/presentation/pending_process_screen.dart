@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/mytrip/data/mytrip_model.dart';
 import 'package:group_trip/features/mytrip/providers/mytrip_provider.dart';
 import 'package:group_trip/features/trip/presentation/widgets/process/pending/pending_body.dart';
@@ -79,7 +80,10 @@ class _PendingProcessScreenState extends ConsumerState<PendingProcessScreen> {
                 ),
                 _buildCircleIcon(
                   icon: Icons.share,
-                  onTap: () => {print('share')},
+                  onTap: () => context.push(
+                    '/friend-search',
+                    extra: {'tripDepartureId': widget.departureId},
+                  ),
                 ),
               ],
             ),

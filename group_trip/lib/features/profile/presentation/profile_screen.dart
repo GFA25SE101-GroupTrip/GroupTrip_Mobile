@@ -6,6 +6,11 @@ import 'package:group_trip/features/auth/providers/user_provider.dart'
     show authNotifierProvider;
 import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/profile/providers/profile_provider.dart';
+import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
+import 'package:group_trip/features/chat/providers/chat_provider.dart';
+import 'package:group_trip/features/mytrip/providers/mytrip_provider.dart';
+import 'package:group_trip/features/notifications/providers/notificationProvider.dart';
+import 'package:group_trip/features/invite/provider/invite_provider.dart';
 import 'package:group_trip/shared/widgets/atoms/named_avartar.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -201,6 +206,22 @@ class ProfileScreen extends ConsumerWidget {
               },
             ),
             _buildMenuItem(
+              icon: Icons.shield,
+              title: "Bảo hiểm du lịch",
+              subtitle: "Quản lý bảo hiểm của bạn",
+              onTap: () {
+                context.push('/profile/insurance');
+              },
+            ),
+            _buildMenuItem(
+              icon: Icons.mail_outline,
+              title: "Lời mời của bạn",
+              subtitle: "Xem lời mời tham gia chuyến đi",
+              onTap: () {
+                context.push('/profile/invites');
+              },
+            ),
+            _buildMenuItem(
               icon: Icons.help_outline,
               title: "Help Center",
               subtitle: "FAQ & hỗ trợ khách hàng",
@@ -243,9 +264,27 @@ class ProfileScreen extends ConsumerWidget {
 
                 // Invalidate cached user provider so UI updates
                 ref.invalidate(userFromStorageProvider);
-                // Also clear profile data cached in providers so profile view updates
+                
+                // Clear profile data cached in providers
                 ref.invalidate(profileNotifierProvider);
                 ref.invalidate(profileViewProvider);
+                ref.invalidate(userInformationNotifierProvider);
+                
+                // Clear wallet data
+                ref.invalidate(walletModelProvider);
+                ref.invalidate(transactionsProvider);
+                ref.invalidate(transactionsByRangeProvider);
+                
+                // Clear trip data
+                ref.invalidate(mytripNotifierProvider);
+                
+                // Clear notification data
+                ref.invalidate(getNotification);
+                ref.invalidate(unreadNotificationCountProvider);
+                
+                // Clear invite data
+                ref.invalidate(receivedInvitesProvider);
+                ref.invalidate(sentInvitesProvider);
 
                 // Navigate to login
                 context.push('/');

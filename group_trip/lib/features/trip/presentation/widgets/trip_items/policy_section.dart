@@ -2,25 +2,67 @@ import 'package:flutter/material.dart';
 import 'package:group_trip/features/trip/data/trip_rule.dart';
 
 class PolicySection extends StatelessWidget {
-  final TripRule trip;
-  const PolicySection({super.key, required this.trip});
+  final TripRule? trip;
+  const PolicySection({super.key, this.trip});
 
   @override
   Widget build(BuildContext context) {
+    if (trip == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Chính sách & Quy định',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1C1C1E),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ],
+            ),
+            child: const Center(
+              child: Text(
+                'Chưa có quy định nào',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF999999),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     final List<Map<String, dynamic>> policyData = [
       {
         "title": "Giới hạn độ tuổi",
         "icon": Icons.person,
         "items": [
-          "Từ ${trip.minAge} đến ${trip.maxAge} tuổi",
+          "Từ ${trip!.minAge} đến ${trip!.maxAge} tuổi",
         ],
       },
       {
         "title": "Trình độ kinh nghiệm yêu cầu",
         "icon": Icons.workspace_premium,
         "items": [
-          trip.experienceLevel.isNotEmpty
-              ? trip.experienceLevel
+          trip!.experienceLevel.isNotEmpty
+              ? trip!.experienceLevel
               : "Không yêu cầu kinh nghiệm",
         ],
       },
@@ -28,8 +70,8 @@ class PolicySection extends StatelessWidget {
         "title": "Ghi chú đặc biệt",
         "icon": Icons.info,
         "items": [
-          trip.specialNote.isNotEmpty
-              ? trip.specialNote
+          trip!.specialNote.isNotEmpty
+              ? trip!.specialNote
               : "Không có ghi chú đặc biệt",
         ],
       },

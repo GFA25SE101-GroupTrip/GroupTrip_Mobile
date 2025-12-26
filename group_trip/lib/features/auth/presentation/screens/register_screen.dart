@@ -331,6 +331,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
+                // TODO: Temporarily commented - Google Sign-In
+                /*
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -381,6 +383,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                */
                 // Sign Up Button
                 SizedBox(
                   width: double.infinity,

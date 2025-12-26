@@ -33,34 +33,31 @@ class _MyTripsScreenState extends ConsumerState<MyTripsScreen> {
       ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _statusOptions.map((status) {
-                  final isSelected = _selectedStatus == status;
-                  final statusLabel = status == 'UpComming'
-                      ? 'Sắp tới'
-                      : status == 'InProgress'
-                          ? 'Đang diễn ra'
-                          : 'Hoàn thành';
-
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      selected: isSelected,
-                      label: Text(statusLabel),
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedStatus = status;
-                        });
-                        ref.read(mytripNotifierProvider.notifier).fetchMyTrips(status: status);
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            child: SegmentedButton<String>(
+              segments: <ButtonSegment<String>>[
+                ButtonSegment<String>(
+                  value: 'UpComming',
+                  label: const Text('Sắp tới'),
+                ),
+                ButtonSegment<String>(
+                  value: 'InProgress',
+                  label: const Text('Đang diễn ra'),
+                ),
+                ButtonSegment<String>(
+                  value: 'Completed',
+                  label: const Text('Hoàn thành'),
+                ),
+              ],
+              selected: <String>{_selectedStatus},
+              onSelectionChanged: (Set<String> newValue) {
+                setState(() {
+                  _selectedStatus = newValue.first;
+                });
+                ref.read(mytripNotifierProvider.notifier).fetchMyTrips(status: newValue.first);
+              },
+              showSelectedIcon: false,
             ),
           ),
           Expanded(
@@ -200,6 +197,7 @@ class MyTripCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final start = model.startDate;
     final end = model.endDate;
     final participants = model.numberMemberIn;
@@ -209,7 +207,11 @@ class MyTripCard extends ConsumerWidget {
     final isUserInactive = model.currentUserStatus.toLowerCase() == 'inactive';
   
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
       clipBehavior: Clip.hardEdge,
       child: InkWell(
         onTap: () {
@@ -223,11 +225,11 @@ class MyTripCard extends ConsumerWidget {
               width: double.infinity,
               height: 200,
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
+                color: colorScheme.surfaceContainerHighest,
               ),
               child: model.img.isNotEmpty
-                  ? Image.network(model.img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.photo, size: 50, color: Colors.grey))
-                  : const Icon(Icons.photo, size: 50, color: Colors.grey),
+                  ? Image.network(model.img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.photo, size: 50, color: colorScheme.outline))
+                  : Icon(Icons.photo, size: 50, color: colorScheme.outline),
             ),
             // Content below image
             Padding(
@@ -245,16 +247,16 @@ class MyTripCard extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Status badge
+                      // Status badge - Material 3 style
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: statusColor(model.departureStatus).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           statusLabel(model.departureStatus),
-                          style: theme.textTheme.bodySmall?.copyWith(color: statusColor(model.departureStatus), fontWeight: FontWeight.bold),
+                          style: theme.textTheme.labelSmall?.copyWith(color: statusColor(model.departureStatus), fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
@@ -273,43 +275,46 @@ class MyTripCard extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.people, size: 16, color: Colors.grey[600]),
+                      Icon(Icons.people, size: 16, color: colorScheme.onSurfaceVariant),
                       const SizedBox(width: 6),
                       Text('$participants/$maxUsers người', style: theme.textTheme.bodySmall),
                       const SizedBox(width: 12),
-                      // User status indicator
+                      // User status indicator - Material 3 style
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: isUserInactive
-                              ? Colors.red.withOpacity(0.12)
+                              ? colorScheme.error.withOpacity(0.12)
                               : currentUserStatusColor(model.currentUserStatus).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           isUserInactive
                               ? 'Đã rời nhóm'
                               : currentUserStatusLabel(model.currentUserStatus),
-                          style: theme.textTheme.bodySmall?.copyWith(
+                          style: theme.textTheme.labelSmall?.copyWith(
                             color: isUserInactive
-                                ? Colors.red
+                                ? colorScheme.error
                                 : currentUserStatusColor(model.currentUserStatus),
-                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                       const Spacer(),
                       // Button logic based on user status and departure status
-                     if (isUserJoined || model.departureStatus.toLowerCase().contains('cancel'))
+                      if (isUserJoined || model.departureStatus.toLowerCase().contains('cancel'))
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: model.departureStatus.toLowerCase().contains('cancel') 
-                                ? Colors.grey.shade600
-                                : Colors.blue.shade600,
+                            backgroundColor: model.departureStatus.toLowerCase().contains('cancel')
+                                ? colorScheme.surfaceContainerHighest
+                                : colorScheme.primary,
+                            foregroundColor: model.departureStatus.toLowerCase().contains('cancel')
+                                ? colorScheme.onSurface
+                                : colorScheme.onPrimary,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            minimumSize: const Size(100, 42),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            minimumSize: const Size(80, 40),
                           ),
                           onPressed: () {
                             // Navigate based on departure status
@@ -341,18 +346,20 @@ class MyTripCard extends ConsumerWidget {
                               );
                             }
                           },
-                          child: const Text('Chi tiết', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          child: const Text('Chi tiết', style: TextStyle(fontWeight: FontWeight.w600)),
                         )
                       else if (model.departureStatus.toLowerCase().contains('ready'))
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
+                            backgroundColor: colorScheme.secondary,
+                            foregroundColor: colorScheme.onSecondary,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            minimumSize: const Size(100, 42),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            minimumSize: const Size(80, 40),
                           ),
                           onPressed: () => _handleRejoinTrip(context, ref),
-                          child: const Text('Tham gia', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          child: const Text('Tham gia', style: TextStyle(fontWeight: FontWeight.w600)),
                         ),
                       
                     ],
@@ -361,14 +368,14 @@ class MyTripCard extends ConsumerWidget {
                   if (isCanceled) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.redAccent.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
+                        color: colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'Lý do hủy: ${model.cancelReason}',
-                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.redAccent, fontSize: 11),
+                        style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onErrorContainer, fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],

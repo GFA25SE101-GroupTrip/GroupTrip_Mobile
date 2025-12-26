@@ -111,7 +111,7 @@ class TravelAgencySection extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(16),
                             child: Image.network(
                               img,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                               errorBuilder: (_, __, ___) => Container(
                                 color: Colors.grey[200],
                                 child: const Icon(Icons.image_not_supported, color: Colors.grey),

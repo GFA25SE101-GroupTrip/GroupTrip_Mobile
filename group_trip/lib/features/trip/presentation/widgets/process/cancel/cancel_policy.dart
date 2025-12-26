@@ -9,12 +9,12 @@ class CancelPolicy extends StatelessWidget {
       (
         Icons.info_outline,
         const Color(0xFF3B82F6),
-        'Hoàn tiền 100% khi trip bị hủy do không đủ số lượng',
+        'Hoàn tiền 100% khi trip bị hủy do không đủ số lượng hoặc đến từ nhà tổ chức',
       ),
       (
         Icons.access_time,
         const Color(0xFFF97316),
-        'Thời gian hoàn tiền: 5–7 ngày làm việc',
+        'Thời gian hoàn tiền tối đa: 5–7 ngày làm việc',
       ),
       (
         Icons.verified_user_outlined,
@@ -24,7 +24,7 @@ class CancelPolicy extends StatelessWidget {
       (
         Icons.phone,
         const Color(0xFF2563EB),
-        'Liên hệ hotline để được hỗ trợ nhanh nhất',
+        'Liên hệ hotline đại diện du lịch để được hỗ trợ nhanh nhất',
       ),
     ];
 
@@ -39,7 +39,7 @@ class CancelPolicy extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Cancellation Policy',
+            'Chính sách hoàn tiền',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 12),

@@ -8,5 +8,19 @@ class StaffRepository {
     Future<List<DepartureStaff>> getStaffs() async {
         return await remoteDataSource.fetchStaffs();
     }
+
+    Future<void> updateSegmentStatus({
+        required String activityId,
+        required String tripId,
+        required String departureId,
+        required String activityPhase,
+    }) async {
+        return await remoteDataSource.updateSegmentStatus(
+            activityId: activityId,
+            tripId: tripId,
+            departureId: departureId,
+            activityPhase: activityPhase,
+        );
+    }
   
 }

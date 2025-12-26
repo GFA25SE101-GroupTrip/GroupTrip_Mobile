@@ -32,6 +32,14 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
         title: const Text('Chuyến đi của tôi'),
         centerTitle: true,
         elevation: 1,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.invalidate(staffDeparturesProvider);
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -69,34 +77,41 @@ class _StaffScreenState extends ConsumerState<StaffScreen> {
                     child: Text('Không có chuyến đi'),
                   );
                 }
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 12,
-                  ),
-                  itemCount: trips.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) => Consumer(
-                    builder: (context, ref, _) {
-                      final tripData = ref.watch(staffDeparturesProvider);
-                      return tripData.when(
-                        data: (departures) {
-                          final matching = departures.where(
-                            (d) => d.tripName == trips[index].name,
-                          ).firstOrNull;
-                          return StaffTripCard(
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.refresh(staffTripsByStatusProvider(_selectedStatus));
+                    ref.refresh(staffDeparturesProvider);
+                    ref.invalidate(staffDeparturesProvider);
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 12,
+                    ),
+                    itemCount: trips.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) => Consumer(
+                      builder: (context, ref, _) {
+                        final tripData = ref.watch(staffDeparturesProvider);
+                        return tripData.when(
+                          data: (departures) {
+                            final matching = departures.where(
+                              (d) => d.tripName == trips[index].name,
+                            ).firstOrNull;
+                            return StaffTripCard(
+                              trip: trips[index],
+                              departureStaff: matching,
+                            );
+                          },
+                          loading: () => StaffTripCard(
                             trip: trips[index],
-                            departureStaff: matching,
-                          );
-                        },
-                        loading: () => StaffTripCard(
-                          trip: trips[index],
-                        ),
-                        error: (_, __) => StaffTripCard(
-                          trip: trips[index],
-                        ),
-                      );
-                    },
+                          ),
+                          error: (_, __) => StaffTripCard(
+                            trip: trips[index],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },

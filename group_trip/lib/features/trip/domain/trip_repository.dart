@@ -11,11 +11,23 @@ class TripRepository {
     return await remoteDataSource.fetchTripById(tripId);
   }
 
-  Future<bool> joinTrip(String tripDepartureId) async {
+  Future<Map<String, dynamic>> joinTrip(String tripDepartureId) async {
     return await remoteDataSource.joinTrip(tripDepartureId);
   }
 
   Future<bool> checkJoin(String tripDepartureId) async {
     return await remoteDataSource.checkJoin(tripDepartureId);
+  }
+
+  Future<List<TripModel>> searchTripsByName(String tripName) async {
+    return await remoteDataSource.fetchTripsByName(tripName);
+  }
+
+  Future<List<TripModel>> searchTripsByDate(String fromDate) async {
+    return await remoteDataSource.fetchTripsByDate(fromDate);
+  }
+
+  Future<void> addInsuranceToTripDeparture(String tripDepartureId, String insurance) async {
+    return await remoteDataSource.userChooseInsurance(tripDepartureId, insurance);
   }
 } 

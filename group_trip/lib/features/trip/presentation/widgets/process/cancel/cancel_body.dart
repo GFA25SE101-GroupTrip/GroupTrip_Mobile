@@ -7,8 +7,19 @@ import 'package:group_trip/features/trip/presentation/widgets/process/cancel/can
 
 class CancelBody extends StatefulWidget {
   final String imageUrl;
+  final String? reason;
+  final int? refundAmount;
+  final String? paymentMethod;
+  final String? estimatedTime;
 
-  const CancelBody({super.key, required this.imageUrl});
+  const CancelBody({
+    super.key,
+    required this.imageUrl,
+    this.reason,
+    this.refundAmount,
+    this.paymentMethod,
+    this.estimatedTime,
+  });
 
   @override
   State<CancelBody> createState() => _CancelBodyState();
@@ -28,13 +39,16 @@ class _CancelBodyState extends State<CancelBody> {
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children:  [
                         SizedBox(height: 12),
-                        CancelNotice(),
-                        SizedBox(height: 20),
-                        CancelSummary(),
+                        CancelSummary(
+                          reason: widget.reason,
+                          refundAmount: widget.refundAmount,
+                          paymentMethod: widget.paymentMethod,
+                          estimatedTime: widget.estimatedTime,
+                        ),
                         SizedBox(height: 24),
-                        CancelContact(),
+                       
                         SizedBox(height: 24),
                         CancelPolicy(),
                         SizedBox(height: 160),

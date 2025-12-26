@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:group_trip/core/api/api_client.dart';
 import 'package:group_trip/features/trip/data/trip_rel_model.dart';
 
@@ -59,41 +60,49 @@ class TripRemoteDataSource {
   }
   // Tính năng join trip members
   // https://gt-trip.grouptrip.site/api/trip-members?tripDepartureId=b65b86e1-fed0-4458-a2a7-2c7adbadb581
-  Future<bool> joinTrip(String tripDepartureId) async {
-    final endpoint =
-        '/api/trip-members';
-    final service = 'trip';
+  Future<Map<String, dynamic>> joinTrip(String tripDepartureId) async {
+  final endpoint =
+      '/api/trip-members?tripDepartureId=$tripDepartureId';
 
-    print('➡️ [TripAPI] POST $endpoint -> service=$service');
+  final service = 'trip';
 
-    try {
-      final response = await apiClient.postWithParams(service, endpoint, 
-      queryParameters: {
-        'tripDepartureId': tripDepartureId,
-      });
+  try {
+    final response = await apiClient.post(service, endpoint);
 
-      print(
-        '⬅️ [TripAPI] Response ($service$endpoint) status=${response.statusCode}',
-      );
-      print('📦 Response data: ${response.data}');
+    return {
+      'success': true,
+      'message': 'Tham gia chuyến đi thành công',
+    };
+  } on DioException catch (e) {
+    // 🔥 ĐÂY là chỗ đọc message backend
+    final data = e.response?.data;
 
-      if (response.statusCode != null &&
-          response.statusCode! >= 200 &&
-          response.statusCode! < 300) {
-        print('✅ Successfully joined trip with ID: $tripDepartureId');
-        return true;
-      } else {
-        print('❌ HTTP error: status=${response.statusCode}');
-        throw Exception(
-          'Failed to join trip: status=${response.statusCode}',
-        );
-      }
-    } catch (e, stack) {
-      print('💥 [TripAPI] Exception while joining trip: $e');
-      print(stack);
-      return false;
+    String errorCode = 'Bad request!';
+    String errorMessage = 'Không thể tham gia chuyến này';
+
+    if (data is Map<String, dynamic>) {
+      errorCode = data['errorCode'] ?? errorCode;
+      errorMessage = data['errorMessage'] ?? errorMessage;
     }
+
+    print('💥 Join trip error ($errorCode): $errorMessage');
+
+    return {
+      'success': false,
+      'errorCode': errorCode,
+      'errorMessage': errorMessage,
+    };
+  } catch (e) {
+    // fallback cho lỗi khác (network, timeout…)
+    return {
+      'success': false,
+      'errorCode': 'Exception',
+      'errorMessage': e.toString(),
+    };
   }
+}
+
+
 
 Future<bool> checkJoin(String tripDepartureId) async {
   final response = await apiClient.get(
@@ -121,6 +130,87 @@ Future<bool> checkJoin(String tripDepartureId) async {
     }
   } else {
     throw Exception('Failed to check join trip: status=${response.statusCode}');
+  }
+}
+
+
+
+Future<List<TripModel>> fetchTripsByName(String name) async {
+    final endpoint = '/api/trips/name';
+    final queryParams = {'name': name};
+    
+    final response = await apiClient.getWithParams('trip', endpoint, queryParameters: queryParams);
+    
+    if (response.statusCode != null &&
+        response.statusCode! >= 200 &&
+        response.statusCode! < 300) {
+      dynamic payload = response.data;
+      print('Trips by name payload: $payload');
+      if (payload is Map && payload.containsKey('data')) {
+        payload = payload['data'];
+      }
+
+      if (payload is List) {
+        return payload
+            .map((item) => TripModel.fromJson(item as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw Exception(
+          'Unexpected trips by name payload shape: ${payload.runtimeType}',
+        );
+      }
+    } else {
+      throw Exception('Failed to load trips by name: status=${response.statusCode}');
+    }
+  }
+
+
+Future<List<TripModel>> fetchTripsByDate(String fromDate) async {
+    final endpoint = '/api/trips/by-date';
+    final queryParams = {'fromDate': fromDate};
+    
+    final response = await apiClient.getWithParams('trip', endpoint, queryParameters: queryParams);
+    
+    if (response.statusCode != null &&
+        response.statusCode! >= 200 &&
+        response.statusCode! < 300) {
+      dynamic payload = response.data;
+      print('Trips by date payload: $payload');
+      if (payload is Map && payload.containsKey('data')) {
+        payload = payload['data'];
+      }
+
+      if (payload is List) {
+        return payload
+            .map((item) => TripModel.fromJson(item as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw Exception(
+          'Unexpected trips by date payload shape: ${payload.runtimeType}',
+        );
+      }
+    } else {
+      throw Exception('Failed to load trips by date: status=${response.statusCode}');
+    }
+  }
+
+Future<void> userChooseInsurance(
+  String tripDepartureId,
+  String insuranceId,
+) async {
+  final endpoint =
+      '/api/insurance/user-choose/$insuranceId/$tripDepartureId';
+
+  final response = await apiClient.put('trip', endpoint);
+
+  if (response.statusCode != null &&
+      response.statusCode! >= 200 &&
+      response.statusCode! < 300) {
+    print('Successfully chose insurance for trip departure $tripDepartureId');
+  } else {
+    throw Exception(
+      'Failed to choose insurance: status=${response.statusCode}',
+    );
   }
 }
 

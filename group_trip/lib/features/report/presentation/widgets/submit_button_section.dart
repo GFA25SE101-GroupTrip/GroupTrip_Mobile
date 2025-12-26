@@ -61,7 +61,7 @@ class SubmitButtonSection extends ConsumerWidget {
           final typeValue = getTypeValue(selectedType ?? '');
           
           // Determine assignToRole based on selectedContact
-          final assignToRole = selectedContact == 'Admin' ? 'Admin' : 'Representative';
+          final assignToRole = selectedContact == 'Admin' ? 'Admin' : 'TravelRepresentative';
           
           print(
             'Submitting report with: userId\n'
@@ -82,6 +82,7 @@ class SubmitButtonSection extends ConsumerWidget {
             content: descriptionController.text,
             status: 'Pending', // Default status
             attach: attachedImage != null ? [attachedFile!] : null, // Include attachment if exists
+            pdfFile: null, // No PDF file in this context
           );
 
           try {

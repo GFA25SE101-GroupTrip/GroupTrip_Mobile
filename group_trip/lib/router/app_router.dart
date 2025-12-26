@@ -12,6 +12,9 @@ import 'package:group_trip/features/blog/presentation/blog_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_detail_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_infor_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_screen.dart';
+import 'package:group_trip/features/insurance/presentation/insurance_screen.dart';
+import 'package:group_trip/features/invite/presentation/friend_search_screen.dart';
+import 'package:group_trip/features/invite/presentation/myinvite_screen.dart';
 import 'package:group_trip/features/mytrip/presentation/mytrip.dart';
 import 'package:group_trip/features/notifications/presentation/screens/notification.dart';
 import 'package:group_trip/features/profile/presentation/profile_detail_screen.dart';
@@ -124,6 +127,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HelpCenterScreen(),
       ),
 
+      GoRoute(
+        path: '/profile/insurance',
+        builder: (context, state) => const InsuranceScreen(),
+      ),
+      GoRoute(
+        path: '/profile/invites',
+        builder: (context, state) => const MyInviteScreen(),
+      ),
+      GoRoute(
+        path: '/friend-search',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final tripDepartureId = extra?['tripDepartureId'] as String? ?? '';
+          return FriendSearchScreen(tripDepartureId: tripDepartureId);
+        },
+      ),
       GoRoute(
         path: '/profile/help/submit',
         builder: (context, state) => const SubmitTicketScreen(),

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:group_trip/core/providers/api_client_provider.dart';
+import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:group_trip/features/staff/data/staff_api.dart';
 import 'package:group_trip/features/staff/data/staff_data.dart';
 
@@ -12,6 +13,9 @@ final staffRemoteDataSourceProvider = Provider((ref) {
 // Provider for fetching staff departures
 final staffDeparturesProvider =
     FutureProvider<List<DepartureStaff>>((ref) async {
+  // Watch auth state to invalidate cache when logout/login changes
+  ref.watch(authNotifierProvider);
+  
   final remoteDataSource = ref.watch(staffRemoteDataSourceProvider);
   return remoteDataSource.fetchStaffs();
 });
@@ -86,5 +90,18 @@ final staffTripsProvider = FutureProvider<List<StaffTripModel>>((ref) async {
 final staffTripsByStatusProvider =
     FutureProvider.family<List<StaffTripModel>, String>((ref, statusGroup) async {
   final trips = await ref.watch(staffTripsProvider.future);
+  print('Filtering trips for status group: $statusGroup');
   return trips.where((trip) => trip.statusGroup == statusGroup).toList();
+});
+
+
+final staffUpdateCheckingProvider = FutureProvider.family<void, Map<String, String>>(
+    (ref, params) async {
+  final remoteDataSource = ref.watch(staffRemoteDataSourceProvider);
+  await remoteDataSource.updateSegmentStatus(
+    activityId: params['activityId']!,
+    tripId: params['tripId']!,
+    departureId: params['departureId']!,
+    activityPhase: params['activityPhase']!,
+  );
 });

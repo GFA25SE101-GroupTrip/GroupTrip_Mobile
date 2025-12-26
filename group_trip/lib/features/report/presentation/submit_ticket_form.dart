@@ -49,9 +49,11 @@ class _SubmitTicketScreenState extends ConsumerState<SubmitTicketScreen> {
     
     return myTripsAsync.when(
       data: (trips) {
+        // Filter only completed trips
+        final completedTrips = trips.where((trip) => trip.departureStatus?.toLowerCase() == 'completed').toList();
         // Create a map: tripId -> tripName for display
-        final tripIdToNameMap = {for (var trip in trips) trip.departureId: trip.name};
-        final tripIds = trips.map((trip) => trip.departureId).toList();
+        final tripIdToNameMap = {for (var trip in completedTrips) trip.departureId: trip.name};
+        final tripIds = completedTrips.map((trip) => trip.departureId).toList();
         
         return Scaffold(
           appBar: AppBar(

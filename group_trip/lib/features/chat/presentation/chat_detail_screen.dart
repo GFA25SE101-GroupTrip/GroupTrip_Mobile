@@ -311,9 +311,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           .read(signalRControllerProvider)
           .sendMessage(payload, senderId, widget.chatId);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Gửi thất bại: $e")));
+      // ScaffoldMessenger.of(
+      //   context,
+      // ).showSnackBar(SnackBar(content: Text("Gửi thất bại: $e")));
     }
   }
 }

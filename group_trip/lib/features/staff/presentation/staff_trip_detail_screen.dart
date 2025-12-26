@@ -5,51 +5,155 @@ import 'package:intl/intl.dart';
 import 'package:group_trip/features/staff/data/staff_data.dart';
 import 'package:group_trip/features/mytrip/providers/mytrip_provider.dart';
 import 'package:group_trip/features/staff/presentation/widgets/trip_header_widgets.dart';
-import 'package:group_trip/features/staff/presentation/widgets/tracking_widgets.dart';
+// import 'package:group_trip/features/staff/presentation/widgets/tracking_widgets.dart';
+import 'package:group_trip/features/staff/presentation/providers/staff_provider.dart';
+import 'package:group_trip/features/staff/presentation/widgets/trip_header_info.dart';
+import 'package:group_trip/features/staff/presentation/widgets/segment_card.dart';
+import 'package:group_trip/features/staff/providers/staff_providers.dart';
+import 'package:group_trip/features/Map/presentation/map_screen.dart';
 
-class StaffTripDetailScreen extends ConsumerStatefulWidget {
+class StaffTripDetailScreen extends ConsumerWidget {
   final DepartureStaff trip;
 
-  const StaffTripDetailScreen({
-    super.key,
-    required this.trip,
-  });
+  const StaffTripDetailScreen({super.key, required this.trip});
 
-  @override
-  ConsumerState<StaffTripDetailScreen> createState() =>
-      _StaffTripDetailScreenState();
-}
-
-class _StaffTripDetailScreenState extends ConsumerState<StaffTripDetailScreen> {
-  late Map<String, bool> _expandedSegments;
-
-  @override
-  void initState() {
-    super.initState();
-    _expandedSegments = {};
+  String _getStatusLabel(String? status) {
+    if (status == null) return 'N/A';
+    switch (status.toLowerCase()) {
+      case 'ready':
+        return 'Sẵn sàng';
+      case 'full':
+        return 'Đợi chốt nhóm';
+      case 'completed':
+        return 'Đã hoàn thành';
+      case 'inprogress':
+        return 'Đang diễn ra';
+      case 'cancelled':
+        return 'Đã hủy';
+      case 'pending':
+        return 'Chờ bắt đầu';
+      default:
+        return status;
+    }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     // Fetch tracking route data using Riverpod provider
-    final trackingRouteAsync =
-        ref.watch(mytripTrackingRouteProvider(widget.trip.id));
+    final trackingRouteAsync = ref.watch(mytripTrackingRouteProvider(trip.id));
+    
+    // ✅ Test tripLocationsProvider - gọi để extract tất cả vị trí
+    final tripLocationsAsync = ref.watch(tripLocationsProvider(trip.tripId));
+    
+    // Debug: in danh sách vị trí
+    tripLocationsAsync.when(
+      data: (locations) {
+        print('📍 Trip Locations (${locations.length}):');
+        for (final loc in locations) {
+          print('   - ${loc.name} (${loc.type}): ${loc.latitude}, ${loc.longitude}');
+        }
+      },
+      loading: () => print('⏳ Loading trip locations...'),
+      error: (err, st) => print('❌ Error loading locations: $err'),
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chi tiết chuyến đi'),
-        centerTitle: true,
-        elevation: 1,
-      ),
+      backgroundColor: Colors.white,
       body: trackingRouteAsync.when(
-        data: (trackingRoute) =>
-            _buildContent(context, theme, dateFormat, trackingRoute),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text('Lỗi: $error'),
+        data:
+            (trackingRoute) =>
+                _buildContent(context, ref, dateFormat, trackingRoute),
+        loading:
+            () => const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+              ),
+            ),
+        error:
+            (error, stack) => Center(
+              child: Text(
+                'Lỗi: $error',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: Colors.grey.shade200,
+              width: 1,
+            ),
+          ),
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007AFF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
+            ),
+            onPressed: () {
+              // ✅ Navigate tới MapScreen với trip locations
+              tripLocationsAsync.when(
+                data: (locations) {
+                  if (locations.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Không có dữ liệu vị trí cho chuyến đi này'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+                  
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MapScreen(
+                        locations: locations,
+                        title: trip.tripName ?? 'Bản đồ chuyến đi',
+                      ),
+                    ),
+                  );
+                },
+                loading: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đang tải dữ liệu bản đồ...'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                error: (err, st) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Lỗi tải bản đồ: $err'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              );
+            },
+            icon: const Icon(Icons.map, size: 20),
+            label: const Text(
+              'Xem bản đồ',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -57,414 +161,198 @@ class _StaffTripDetailScreenState extends ConsumerState<StaffTripDetailScreen> {
 
   Widget _buildContent(
     BuildContext context,
-    ThemeData theme,
+    WidgetRef ref,
     DateFormat dateFormat,
     TrackingRoute? trackingRoute,
   ) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header với ảnh
-            Container(
-              width: double.infinity,
-              height: 220,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-              ),
-              child: widget.trip.tripImages.isNotEmpty
-                  ? Image.network(
-                      widget.trip.tripImages.first,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.photo, size: 80, color: Colors.grey),
-                    )
-                  : const Icon(Icons.photo, size: 80, color: Colors.grey),
-            ),
-            // Thông tin chuyến đi
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Tên chuyến
-                  Text(
-                    widget.trip.tripName,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Trạng thái
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(widget.trip.departureStatus)
-                          .withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _getStatusLabel(widget.trip.departureStatus),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color:
-                            _getStatusColor(widget.trip.departureStatus),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Ngày
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today, size: 18, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${dateFormat.format(DateTime.parse(widget.trip.startDate))} - ${dateFormat.format(DateTime.parse(widget.trip.endDate))}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Số người
-                  Row(
-                    children: [
-                      Icon(Icons.people, size: 18, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${widget.trip.numberMemberIn} người',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  // Contact button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade600,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Liên hệ nhóm ${widget.trip.tripName}',
-                            ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.phone, color: Colors.white),
-                      label: const Text(
-                        'Liên hệ nhóm',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Lộ trình
-            if (trackingRoute != null)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Lộ trình chuyến đi',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ..._buildSegmentsList(
-                      trackingRoute.segmentTrackingViews ?? [],
-                      theme,
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      );
-  }
-
-  List<Widget> _buildSegmentsList(
-    List<SegmentTrackingViews> segments,
-    ThemeData theme,
-  ) {
-    return segments.asMap().entries.map((entry) {
-      final index = entry.key;
-      final segment = entry.value;
-      final isExpanded = _expandedSegments[segment.segmentId] ?? false;
-
-      return Column(
         children: [
-          Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ExpansionTile(
-              title: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
+          // Trip header info
+          TripHeaderInfo(trip: trip, dateFormat: dateFormat),
+          // Date and status info section
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade600,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${index + 1}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: const Color(0xFF007AFF).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF007AFF).withOpacity(0.2),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${segment.fromDestination} → ${segment.toDestination}',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
+                          'Ngày khởi hành',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
-                          _getPhaseLabel(segment.segmentPhase),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: _getPhaseColor(segment.segmentPhase),
+                          dateFormat.format(DateTime.parse(trip.startDate)),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: const Color(0xFF007AFF),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              onExpansionChanged: (expanded) {
-                setState(() {
-                  _expandedSegments[segment.segmentId] = expanded;
-                });
-              },
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ..._buildPOIsList(
-                        segment.poiTrackingViews ?? [],
-                        theme,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF22C55E).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF22C55E).withOpacity(0.2),
                       ),
-                    ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Trạng thái',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _getStatusLabel(trip.departureStatus),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: const Color(0xFF22C55E),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      );
-    }).toList();
-  }
-
-  List<Widget> _buildPOIsList(
-    List<PoiTrackingViews> pois,
-    ThemeData theme,
-  ) {
-    return pois.map((poi) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  poi.name,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _getPhaseLabel(poi.poiPhase),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: _getPhaseColor(poi.poiPhase),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Activities
-          ..._buildActivitiesList(poi.activityTrackingViews ?? [], theme),
-          const SizedBox(height: 16),
-        ],
-      );
-    }).toList();
-  }
-
-  List<Widget> _buildActivitiesList(
-    List<ActivityTrackingViews> activities,
-    ThemeData theme,
-  ) {
-    return activities.map((activity) {
-      return Container(
-        margin: const EdgeInsets.only(left: 16, bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Colors.grey.shade300,
-          ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
+          // Routing section
+          if (trackingRoute != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    activity.name,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                    'Lộ trình chuyến đi',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _getPhaseLabel(activity.activityPhase),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: _getPhaseColor(activity.activityPhase),
-                    ),
+                  const SizedBox(height: 20),
+                  ..._buildSegmentsList(
+                    trackingRoute.segmentTrackingViews ?? [],
+                    ref,
+                    context,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _getActivityButtonColor(
-                  activity.activityPhase,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 6,
-                ),
-              ),
-              onPressed: () {
-                _handleCheckIn(activity.name);
-              },
-              icon: const Icon(
-                Icons.check_circle,
-                size: 16,
-                color: Colors.white,
-              ),
-              label: Text(
-                _getActivityButtonText(activity.activityPhase),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
-  }
-
-  void _handleCheckIn(String activityName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Check-in: $activityName'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
+        ],
       ),
     );
   }
 
-  String _getStatusLabel(String status) {
-    final low = status.toLowerCase();
-    if (low.contains('ready') || low.contains('full')) return 'Đợi chốt nhóm';
-    if (low.contains('inprogress')) return 'Đang diễn ra';
-    if (low.contains('completed')) return 'Hoàn thành';
-    if (low.contains('canceled')) return 'Đã hủy';
-    if (low.contains('deposit')) return 'Chờ coc';
-    if (low.contains('fullpayment')) return 'Chờ thanh toán';
-    if (low.contains('pending')) return 'Chờ xác nhận';
-    return status;
+  List<Widget> _buildSegmentsList(
+    List<SegmentTrackingViews> segments,
+    WidgetRef ref,
+    BuildContext context,
+  ) {
+    return segments.asMap().entries.map((entry) {
+      final index = entry.key;
+      final segment = entry.value;
+
+      return SegmentCard(
+        segment: segment,
+        index: index,
+        tripId: trip.id,
+        departureId: trip.id,
+        onActivityCheckIn: (activity) {
+          _handleCheckIn(
+            activity: activity,
+            tripId: trip.id,
+            departureId: trip.id,
+            ref: ref,
+            context: context,
+          );
+        },
+      );
+    }).toList();
   }
 
-  Color _getStatusColor(String status) {
-    final low = status.toLowerCase();
-    if (['ready', 'full', 'fullpayment', 'deposit', 'pending']
-        .any((s) => low.contains(s))) {
-      return Colors.orange;
-    }
-    if (low.contains('inprogress')) return Colors.green;
-    if (low.contains('completed')) return Colors.grey;
-    if (low.contains('canceled')) return Colors.red;
-    return Colors.blueGrey;
-  }
+  void _handleCheckIn({
+    required ActivityTrackingViews activity,
+    required String tripId,
+    required String departureId,
+    required WidgetRef ref,
+    required BuildContext context,
+  }) {
+    final params = {
+      'activityId': activity.activityId,
+      'tripId': tripId,
+      'departureId': departureId,
+      'activityPhase': 'completed',
+    };
 
-  String _getPhaseLabel(String phase) {
-    final low = phase.toLowerCase();
-    if (low.contains('upcomming')) return 'Sắp diễn ra';
-    if (low.contains('inprogress') || low.contains('progress'))
-      return 'Đang diễn ra';
-    if (low.contains('completed')) return 'Đã hoàn thành';
-    return phase;
-  }
+    // Call the provider to update activity status
+    // ignore: avoid_print
+    print('📍 Cập nhật trạng thái hoạt động: $params');
 
-  Color _getPhaseColor(String phase) {
-    final low = phase.toLowerCase();
-    if (low.contains('upcomming')) return Colors.orange;
-    if (low.contains('inprogress') || low.contains('progress'))
-      return Colors.blue;
-    if (low.contains('completed')) return Colors.green;
-    return Colors.grey;
-  }
+    ref
+        .read(staffUpdateCheckingProvider(params).future)
+        .then((_) {
+          // Invalidate the provider to reload the tracking route data
+          ref.invalidate(mytripTrackingRouteProvider(trip.id));
 
-  String _getActivityButtonText(String phase) {
-    final low = phase.toLowerCase();
-    if (low.contains('upcomming')) return 'Check-in';
-    if (low.contains('inprogress') || low.contains('progress'))
-      return 'Kết thúc';
-    if (low.contains('completed')) return 'Đã hoàn thành';
-    return 'Check-in';
-  }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ Cập nhật thành công: ${activity.name}'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        })
+        .catchError((error) {
+          // Extract error message
+          String errorMessage = '❌ Lỗi cập nhật';
+          if (error is Exception) {
+            String errorStr = error.toString();
+            // Remove 'Exception: ' prefix
+            if (errorStr.startsWith('Exception: ')) {
+              errorMessage = errorStr.replaceFirst('Exception: ', '❌ ');
+            } else {
+              errorMessage = '❌ $errorStr';
+            }
+          }
 
-  Color _getActivityButtonColor(String phase) {
-    final low = phase.toLowerCase();
-    if (low.contains('upcomming')) return Colors.blue.shade600;
-    if (low.contains('inprogress') || low.contains('progress'))
-      return Colors.orange.shade600;
-    if (low.contains('completed')) return Colors.green.shade600;
-    return Colors.grey.shade600;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          // ignore: avoid_print
+          print('❌ Lỗi cập nhật: $error');
+        });
   }
 }

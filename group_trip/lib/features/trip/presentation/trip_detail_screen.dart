@@ -32,6 +32,16 @@ class TripDetailPage extends ConsumerStatefulWidget {
 }
 
 class _TripDetailPageState extends ConsumerState<TripDetailPage> {
+  String _formatPrice(dynamic price) {
+    final priceStr = price.toString();
+    final priceNum = int.tryParse(priceStr.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final formatted = priceNum.toString().replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (Match m) => '.',
+    );
+    return '$formatted VND';
+  }
+
   @override
   Widget build(BuildContext context) {
     // If tripId is provided, load full trip details from provider; otherwise use passed props.
@@ -57,7 +67,7 @@ class _TripDetailPageState extends ConsumerState<TripDetailPage> {
             final d = trip.tripDepartures.first;
             if (d.tripCostRanges.isNotEmpty) {
               final p = d.tripCostRanges.first.price;
-              price = 'Từ ${p.toString()}đ';
+              price = 'Từ ${_formatPrice(p)}';
             }
             try {
               final sd = d.startDate;

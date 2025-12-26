@@ -19,6 +19,23 @@
       required this.segmentTrackingViews,
     });
 
+    // Parse ngày từ định dạng ISO 8601
+    String getFormattedStartDate() {
+      return _formatDateFromIso8601(startDate);
+    }
+
+    String getFormattedStartTime() {
+      return _formatTimeFromIso8601(startDate);
+    }
+
+    String getFormattedEndDate() {
+      return _formatDateFromIso8601(endDate);
+    }
+
+    String getFormattedEndTime() {
+      return _formatTimeFromIso8601(endDate);
+    }
+
     factory TrackingRoute.fromJson(Map<String, dynamic> json) {
       var segmentList = <SegmentTrackingViews>[];
       if (json['segmentTrackingViews'] != null) {
@@ -64,12 +81,29 @@
       required this.segmentId,
       required this.fromDestination,
       required this.toDestination,
-      required this.startTime,
-      required this.endTime,
+      this.startTime,
+      this.endTime,
       required this.orderInTrip,
       required this.segmentPhase,
       required this.poiTrackingViews,
     });
+
+    // Parse ngày giờ từ định dạng ISO 8601
+    String getFormattedStartDate() {
+      return startTime != null ? _formatDateFromIso8601(startTime!) : '';
+    }
+
+    String getFormattedStartTime() {
+      return startTime != null ? _formatTimeFromIso8601(startTime!) : '';
+    }
+
+    String getFormattedEndDate() {
+      return endTime != null ? _formatDateFromIso8601(endTime!) : '';
+    }
+
+    String getFormattedEndTime() {
+      return endTime != null ? _formatTimeFromIso8601(endTime!) : '';
+    }
 
     factory SegmentTrackingViews.fromJson(Map<String, dynamic> json) {
       var poiList = <PoiTrackingViews>[];
@@ -109,6 +143,8 @@ class PoiTrackingViews {
     final String name;
     final int orderInSegment;
     final String poiPhase;
+    final String? startAt;
+    final String? endAt;
     final List<ActivityTrackingViews> activityTrackingViews;
 
     PoiTrackingViews({
@@ -116,8 +152,27 @@ class PoiTrackingViews {
       required this.name,
       required this.orderInSegment,
       required this.poiPhase,
+      this.startAt,
+      this.endAt,
       required this.activityTrackingViews,
     });
+
+    // Parse ngày giờ từ định dạng ISO 8601
+    String getFormattedStartDate() {
+      return startAt != null ? _formatDateFromIso8601(startAt!) : '';
+    }
+
+    String getFormattedStartTime() {
+      return startAt != null ? _formatTimeFromIso8601(startAt!) : '';
+    }
+
+    String getFormattedEndDate() {
+      return endAt != null ? _formatDateFromIso8601(endAt!) : '';
+    }
+
+    String getFormattedEndTime() {
+      return endAt != null ? _formatTimeFromIso8601(endAt!) : '';
+    }
 
     factory PoiTrackingViews.fromJson(Map<String, dynamic> json) {
       var activityList = <ActivityTrackingViews>[];
@@ -132,6 +187,8 @@ class PoiTrackingViews {
         name: json['name'] as String,
         orderInSegment: json['orderInSegment'] as int,
         poiPhase: json['poiPhase'] as String,
+        startAt: json['startAt'] as String?,
+        endAt: json['endAt'] as String?,
         activityTrackingViews: activityList,
       );
     }
@@ -142,6 +199,8 @@ class PoiTrackingViews {
         'name': name,
         'orderInSegment': orderInSegment,
         'poiPhase': poiPhase,
+        'startAt': startAt,
+        'endAt': endAt,
         'activityTrackingViews': activityTrackingViews.map((e) => e.toJson()).toList(),
       };
     }
@@ -151,11 +210,13 @@ class PoiTrackingViews {
     final String activityId;
     final String name;
     final String activityPhase;
+    final int? duration;
 
     ActivityTrackingViews({
       required this.activityId,
       required this.name,
       required this.activityPhase,
+      this.duration = 0,
     });
 
     factory ActivityTrackingViews.fromJson(Map<String, dynamic> json) {
@@ -163,6 +224,7 @@ class PoiTrackingViews {
         activityId: json['activityId'] as String,
         name: json['name'] as String,
         activityPhase: json['activityPhase'] as String,
+        duration: json['duration'] as int? ?? 0,
       );
     }
 
@@ -171,7 +233,29 @@ class PoiTrackingViews {
         'activityId': activityId,
         'name': name,
         'activityPhase': activityPhase,
+        'duration': duration,
       };
+    }
+  }
+
+  // Helper functions để parse ngày giờ từ ISO 8601
+  String _formatDateFromIso8601(String dateTimeString) {
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      // Định dạng: dd/MM/yyyy
+      return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+    } catch (e) {
+      return dateTimeString;
+    }
+  }
+
+  String _formatTimeFromIso8601(String dateTimeString) {
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      // Định dạng: HH:mm:ss
+      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateTimeString;
     }
   }
   

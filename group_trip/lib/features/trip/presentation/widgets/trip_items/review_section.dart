@@ -3,56 +3,33 @@ import 'package:group_trip/features/trip/data/trip_feedback.dart';
 
 class ReviewSection extends StatelessWidget {
   final List<TripFeedback> feedbacks;
-  const ReviewSection({super.key, required this.feedbacks});
+  ReviewSection({super.key, required this.feedbacks});
 
   @override
   Widget build(BuildContext context) {
+    _lastContext = context;
     final bool hasFeedback = feedbacks.isNotEmpty;
 
     return Column(
       key: const ValueKey('review_section'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(hasFeedback ? feedbacks : null),
-        const SizedBox(height: 12),
+        if (hasFeedback) ...[_buildHeader(feedbacks), const SizedBox(height: 12)],
         if (hasFeedback)
           ...feedbacks.map((f) => _buildReviewCard(f)).toList()
         else
           _buildEmptyState(),
         const SizedBox(height: 16),
-        Center(
-          child: SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                side: const BorderSide(color: Color(0xFF007AFF)),
-              ),
-              onPressed: () {
-                // TODO: Xử lý "xem thêm đánh giá"
-              },
-              child: const Text(
-                "Xem thêm đánh giá",
-                style: TextStyle(
-                  color: Color(0xFF007AFF),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
+       
       ],
     );
   }
 
-  Widget _buildHeader(List<TripFeedback>? data) {
+  Widget _buildHeader(List<TripFeedback> data) {
     double avgRating = 0;
     int total = 0;
 
-    if (data != null && data.isNotEmpty) {
+    if (data.isNotEmpty) {
       total = data.length;
       avgRating =
           data.map((e) => e.rating).reduce((a, b) => a + b) / total.toDouble();
@@ -155,13 +132,19 @@ class ReviewSection extends StatelessWidget {
                 children: f.images.map((url) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        url.img_url,
-                        width: 80,
-                        height: 60,
-                        fit: BoxFit.cover,
+                    child: GestureDetector(
+                      onTap: () => _showImageViewer(url.img_url),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            url.img_url,
+                            width: 80,
+                            height: 60,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -173,6 +156,39 @@ class ReviewSection extends StatelessWidget {
       ),
     );
   }
+
+  void _showImageViewer(String imageUrl) {
+    final context = _lastContext;
+    if (context != null) {
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.black,
+          insetPadding: EdgeInsets.zero,
+          child: Stack(
+            children: [
+              Center(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  BuildContext? _lastContext;
 
   Widget _buildEmptyState() {
     return Container(

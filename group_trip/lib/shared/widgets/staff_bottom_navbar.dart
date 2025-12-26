@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:group_trip/features/notifications/providers/notificationProvider.dart';
 
-class StaffBottomNavBar extends StatelessWidget {
+final unreadNotificationCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final notificationsAsync = ref.watch(getNotification);
+  return notificationsAsync.when(
+    data: (notifications) => notifications.where((n) => !n.isRead).length,
+    loading: () => 0,
+    error: (_, __) => 0,
+  );
+});
+
+class StaffBottomNavBar extends ConsumerWidget {
   final int currentIndex;
   final Function(int) onTap;
 
@@ -11,7 +22,9 @@ class StaffBottomNavBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
+
     return Container(
       height: 100.0,
       padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -49,13 +62,46 @@ class StaffBottomNavBar extends StatelessWidget {
             label: '',
           ),
           BottomNavigationBarItem(
+            icon: _buildNotificationIcon(unreadCount, currentIndex),
+            label: '',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(
-              currentIndex == 2 ? Icons.person : Icons.account_circle_outlined,
+              currentIndex == 3 ? Icons.person : Icons.account_circle_outlined,
             ),
             label: '',
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNotificationIcon(AsyncValue<int> unreadCount, int currentIndex) {
+    return Stack(
+      alignment: Alignment.topRight,
+      children: [
+        Icon(
+          currentIndex == 2 ? Icons.notifications : Icons.notifications_none,
+        ),
+        unreadCount.when(
+          data: (count) => count > 0
+              ? Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }

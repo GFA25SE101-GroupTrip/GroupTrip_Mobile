@@ -5,16 +5,21 @@ import 'package:group_trip/features/trip/presentation/widgets/trip_items/policy_
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/price_departure_section.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/review_section.dart';
 import 'package:group_trip/features/trip/presentation/widgets/trip_items/schedule_section.dart';
+import 'package:group_trip/features/trip/presentation/widgets/trip_items/insurance_section.dart';
 
 
 class TripTabContent extends StatelessWidget {
   final int selectedIndex;
   final TripModel trip;
+  final String? selectedInsuranceId;
+  final Function(String)? onInsuranceSelected;
 
   const TripTabContent({
     super.key,
     required this.selectedIndex,
     required this.trip,
+    this.selectedInsuranceId,
+    this.onInsuranceSelected,
   });
 
   @override
@@ -46,12 +51,20 @@ class TripTabContent extends StatelessWidget {
           tripImage:
               trip.tripImages.isNotEmpty ? trip.tripImages.first.imgUrl : '',
           tripTitle: trip.name,
+          selectedInsuranceId: selectedInsuranceId,
         );
       case 2:
-        return PolicySection(trip: trip.tripRules!);
+        return PolicySection(trip: trip.tripRules);
       case 3:
-        return ImageSection(images: trip.tripImages);
+        return InsuranceSection(
+          insurances: trip.insurances,
+          onInsuranceSelected: (insurance) {
+            onInsuranceSelected?.call(insurance.id);
+          },
+        );
       case 4:
+        return ImageSection(images: trip.tripImages);
+      case 5:
         return ReviewSection(feedbacks: trip.tripFeedbacks);
       default:
         return const Padding(

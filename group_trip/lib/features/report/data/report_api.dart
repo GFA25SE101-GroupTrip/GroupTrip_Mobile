@@ -65,22 +65,35 @@ class ReportRemoteDataSource {
     }
   }
 
-  Future<void> submitReport(CreateReportModel report) async {
+ Future<void> submitReport(CreateReportModel report) async {
+  try {
     final formData = await report.toFormData();
-
-    final response = await apiClient.postWithOptions(
+    print('Submitting report with FormData: ${formData.fields}, files count: ${formData.files.length}');
+    await apiClient.postWithOptions(
       'user',
       '/api/report',
       data: formData,
       options: Options(contentType: 'multipart/form-data'),
     );
 
-    if (response.statusCode == null ||
-        response.statusCode! < 200 ||
-        response.statusCode! >= 300) {
-      throw Exception("Failed to submit report: status=${response.statusCode}");
+  } on DioException catch (e) {
+    // 👉 LẤY MESSAGE BACKEND
+    final data = e.response?.data;
+
+    String errorMessage = 'Gửi báo cáo thất bại';
+
+    if (data is Map && data['errorMessage'] != null) {
+      errorMessage = data['errorMessage'];
     }
+
+    // 👉 THROW LẠI MESSAGE ĐÚNG
+    throw Exception(errorMessage);
+
+  } catch (e) {
+    throw Exception('Lỗi không xác định: $e');
   }
+}
+
 
   // Implementation of ReportRemoteDataSource
 }

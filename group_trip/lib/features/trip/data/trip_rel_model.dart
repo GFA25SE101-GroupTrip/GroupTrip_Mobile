@@ -5,6 +5,7 @@ import 'package:group_trip/features/trip/data/trip_image.dart';
 import 'package:group_trip/features/trip/data/trip_rule.dart';
 import 'package:group_trip/features/trip/data/trip_segment.dart';
 import 'package:group_trip/features/trip/data/trip_tag_relation.dart';
+import 'package:group_trip/features/trip/data/trip_insurance.dart';
 class TripModel {
   final String id;
   final String creatorId;
@@ -33,6 +34,7 @@ class TripModel {
   final List<TripImage> tripImages;
   final List<TripFeedback> tripFeedbacks;
   final TripRule? tripRules;
+  final List<TripInsurance> insurances;
 
   TripModel({
     required this.id,
@@ -62,6 +64,7 @@ class TripModel {
     required this.tripImages,
     required this.tripFeedbacks,
     this.tripRules,
+    required this.insurances,
   });
 
   factory TripModel.fromJson(Map<String, dynamic> json) {
@@ -157,6 +160,10 @@ class TripModel {
           .map((e) => TripFeedback.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
       tripRules: json['tripRules'] != null ? TripRule.fromJson(Map<String, dynamic>.from(json['tripRules'])) : null,
+      insurances: _toList(json['insurances'])
+          .where((e) => e != null && e is Map)
+          .map((e) => TripInsurance.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
     );
   }
 
@@ -188,5 +195,6 @@ class TripModel {
         'tripImages': tripImages.map((e) => e.toJson()).toList(),
         'tripFeedbacks': tripFeedbacks.map((e) => e.toJson()).toList(),
         'tripRules': tripRules,
+        'insurances': insurances.map((e) => e.toJson()).toList(),
       };
 }

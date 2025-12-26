@@ -3,9 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:group_trip/features/auth/providers/user_provider.dart';
 import 'package:group_trip/core/providers/user_storage_provider.dart';
+import 'package:group_trip/features/notifications/presentation/screens/notification.dart';
+import 'package:group_trip/features/notifications/presentation/screens/notificationStaffScreen.dart';
+import 'package:group_trip/features/notifications/providers/notificationProvider.dart';
 import 'package:group_trip/features/staff/presentation/staff_screen.dart';
 import 'package:group_trip/features/chat/presentation/chat_screen.dart';
 import 'package:group_trip/shared/widgets/staff_bottom_navbar.dart';
+import 'package:group_trip/features/profile/providers/profile_provider.dart';
+import 'package:group_trip/features/wallet/providers/wallet_provider.dart';
+import 'package:group_trip/features/chat/providers/chat_provider.dart';
+import 'package:group_trip/features/mytrip/providers/mytrip_provider.dart';
+import 'package:group_trip/features/invite/provider/invite_provider.dart';
+import 'package:group_trip/features/staff/presentation/providers/staff_provider.dart';
 
 class StaffLayout extends StatefulWidget {
   const StaffLayout({super.key});
@@ -20,6 +29,7 @@ class _StaffLayoutState extends State<StaffLayout> {
   final List<Widget> _pages = [
     const StaffScreen(), // Công việc
     const ChatScreen(), // Chat
+    const NotificationStaffScreen(), // Thông báo
     const StaffProfilePage(), // Profile
   ];
 
@@ -98,13 +108,23 @@ class StaffProfilePage extends ConsumerWidget {
                           ),
                           TextButton(
                             onPressed: () async {
-                              // Call logout
+                              // Invalidate cached data BEFORE logout
+                              ref.invalidate(userFromStorageProvider);
+                              
+                              // Clear profile data
+                              ref.invalidate(profileNotifierProvider);
+                              ref.invalidate(profileViewProvider);
+                              ref.invalidate(userInformationNotifierProvider);
+                              // Clear chat data
+                              ref.invalidate(chatListViewProvider);
+
+                              // Clear notification data
+                              ref.invalidate(getNotification);
+                              
+                              // Call logout AFTER invalidating providers
                               await ref
                                   .read(authNotifierProvider.notifier)
                                   .logout();
-                              
-                              // Invalidate user storage
-                              ref.invalidate(userFromStorageProvider);
                               
                               if (context.mounted) {
                                 Navigator.pop(context); // Close dialog

@@ -2,12 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:group_trip/features/trip/data/cancel_summary_model.dart';
 
 class CancelSummary extends StatelessWidget {
-  const CancelSummary({super.key});
+  final String? reason;
+  final int? refundAmount;
+  final String? paymentMethod;
+  final String? estimatedTime;
+
+  const CancelSummary({
+    super.key,
+    this.reason,
+    this.refundAmount,
+    this.paymentMethod,
+    this.estimatedTime,
+  });
 
   @override
   Widget build(BuildContext context) {
     // Giả lập data – sau này bạn sẽ thay bằng CancelSummaryModel từ API
-    final data = CancelSummaryModel.mock();
+    final data = CancelSummaryModel(
+      reason: reason ?? 'Chưa có lý do',
+      refundAmount: refundAmount != null ? '$refundAmount VND' : 'Chưa có số tiền',
+      paymentMethod: paymentMethod ?? 'Chưa có thông tin',
+      estimatedTime: estimatedTime ?? 'Chưa xác định',
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

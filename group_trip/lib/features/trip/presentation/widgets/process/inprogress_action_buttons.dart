@@ -59,21 +59,21 @@ class _InProgressActionButtonsState extends ConsumerState<InProgressActionButton
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _handleViewMap,
-            icon: const Icon(Icons.map, color: Colors.white),
-            label: const Text(
-              'Xem bản đồ',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF007AFF),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
+        // Expanded(
+        //   child: ElevatedButton.icon(
+        //     onPressed: _handleViewMap,
+        //     icon: const Icon(Icons.map, color: Colors.white),
+        //     label: const Text(
+        //       'Xem bản đồ',
+        //       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        //     ),
+        //     style: ElevatedButton.styleFrom(
+        //       backgroundColor: const Color(0xFF007AFF),
+        //       padding: const EdgeInsets.symmetric(vertical: 12),
+        //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        //     ),
+        //   ),
+        // ),
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton.icon(
